@@ -24,9 +24,14 @@ interface BookingDetail {
   notes: string | null;
   price_agreed: number | null;
   created_at: string;
-  purohit: { id: string; full_name: string; phone: string | null; email: string | null };
+  purohit: { id: string; full_name: string };
   client: { id: string; full_name: string; phone: string | null; email: string | null };
   service: { name: string } | null;
+}
+
+interface PrivateContact {
+  email: string | null;
+  phone: string | null;
 }
 
 interface Review {
@@ -43,6 +48,7 @@ export default function BookingDetail() {
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [purohitContact, setPurohitContact] = useState<PrivateContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
@@ -56,7 +62,7 @@ export default function BookingDetail() {
   const fetchBooking = async () => {
     const { data, error } = await supabase
       .from("bookings")
-      .select(`*, purohits(id, full_name, phone, email), clients(id, full_name, phone, email), pooja_services(name)`)
+      .select(`*, purohits(id, full_name), clients(id, full_name, phone, email), pooja_services(name)`)
       .eq("id", id)
       .maybeSingle();
 
@@ -72,6 +78,20 @@ export default function BookingDetail() {
       client: data.clients,
       service: data.pooja_services,
     });
+    
+    // Fetch purohit private contact info (RLS will enforce access)
+    if (data.purohits?.id) {
+      const { data: privateData } = await supabase
+        .from("purohit_private")
+        .select("email, phone")
+        .eq("purohit_id", data.purohits.id)
+        .maybeSingle();
+      
+      if (privateData) {
+        setPurohitContact(privateData);
+      }
+    }
+    
     setLoading(false);
   };
 
@@ -161,16 +181,33 @@ export default function BookingDetail() {
               >
                 {otherParty.full_name}
               </Link>
-              {otherParty.phone && (
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> {otherParty.phone}
-                </p>
-              )}
-              {otherParty.email && (
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Mail className="h-3 w-3" /> {otherParty.email}
-                </p>
-              )}
+              {isClient && purohitContact ? (
+                <>
+                  {purohitContact.phone && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" /> {purohitContact.phone}
+                    </p>
+                  )}
+                  {purohitContact.email && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Mail className="h-3 w-3" /> {purohitContact.email}
+                    </p>
+                  )}
+                </>
+              ) : !isClient && booking.client ? (
+                <>
+                  {booking.client.phone && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" /> {booking.client.phone}
+                    </p>
+                  )}
+                  {booking.client.email && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Mail className="h-3 w-3" /> {booking.client.email}
+                    </p>
+                  )}
+                </>
+              ) : null}
             </div>
 
             {booking.mode === "in_person" && (

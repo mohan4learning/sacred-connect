@@ -82,6 +82,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookings_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: false
+            referencedRelation: "purohits_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bookings_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -220,6 +227,13 @@ export type Database = {
             columns: ["purohit_id"]
             isOneToOne: false
             referencedRelation: "purohits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultations_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: false
+            referencedRelation: "purohits_public"
             referencedColumns: ["id"]
           },
           {
@@ -381,6 +395,13 @@ export type Database = {
             referencedRelation: "purohits"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purohit_availability_blocks_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: false
+            referencedRelation: "purohits_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       purohit_portfolio_items: {
@@ -419,6 +440,49 @@ export type Database = {
             referencedRelation: "purohits"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purohit_portfolio_items_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: false
+            referencedRelation: "purohits_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purohit_private: {
+        Row: {
+          created_at: string
+          email: string | null
+          phone: string | null
+          purohit_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          phone?: string | null
+          purohit_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          phone?: string | null
+          purohit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purohit_private_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: true
+            referencedRelation: "purohits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purohit_private_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: true
+            referencedRelation: "purohits_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       purohit_services: {
@@ -452,6 +516,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purohit_services_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: false
+            referencedRelation: "purohits_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purohit_services_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -467,14 +538,12 @@ export type Database = {
           bio: string | null
           city: string
           created_at: string
-          email: string | null
           experience_years: number | null
           full_name: string
           id: string
           in_person_available: boolean | null
           is_verified: boolean | null
           languages: string[] | null
-          phone: string | null
           remote_pooja_available: boolean | null
           service_radius_km: number | null
           serviceable_cities: string[] | null
@@ -486,14 +555,12 @@ export type Database = {
           bio?: string | null
           city: string
           created_at?: string
-          email?: string | null
           experience_years?: number | null
           full_name: string
           id?: string
           in_person_available?: boolean | null
           is_verified?: boolean | null
           languages?: string[] | null
-          phone?: string | null
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
@@ -505,14 +572,12 @@ export type Database = {
           bio?: string | null
           city?: string
           created_at?: string
-          email?: string | null
           experience_years?: number | null
           full_name?: string
           id?: string
           in_person_available?: boolean | null
           is_verified?: boolean | null
           languages?: string[] | null
-          phone?: string | null
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
@@ -560,9 +625,74 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      purohits_public: {
+        Row: {
+          area: string | null
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          created_at: string | null
+          experience_years: number | null
+          full_name: string | null
+          id: string | null
+          in_person_available: boolean | null
+          is_verified: boolean | null
+          languages: string[] | null
+          remote_pooja_available: boolean | null
+          service_radius_km: number | null
+          serviceable_cities: string[] | null
+          user_id: string | null
+        }
+        Insert: {
+          area?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          created_at?: string | null
+          experience_years?: number | null
+          full_name?: string | null
+          id?: string | null
+          in_person_available?: boolean | null
+          is_verified?: boolean | null
+          languages?: string[] | null
+          remote_pooja_available?: boolean | null
+          service_radius_km?: number | null
+          serviceable_cities?: string[] | null
+          user_id?: string | null
+        }
+        Update: {
+          area?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          created_at?: string | null
+          experience_years?: number | null
+          full_name?: string | null
+          id?: string | null
+          in_person_available?: boolean | null
+          is_verified?: boolean | null
+          languages?: string[] | null
+          remote_pooja_available?: boolean | null
+          service_radius_km?: number | null
+          serviceable_cities?: string[] | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purohits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      client_has_active_relationship: {
+        Args: { p_client_id: string; p_purohit_id: string }
+        Returns: boolean
+      }
       get_my_client_id: { Args: never; Returns: string }
       get_my_purohit_id: { Args: never; Returns: string }
       get_my_role: {
