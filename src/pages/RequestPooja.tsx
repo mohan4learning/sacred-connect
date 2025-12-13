@@ -60,18 +60,30 @@ export default function RequestPooja() {
   const mode = watch("mode");
 
   useEffect(() => {
+    fetchServices();
+  }, []);
+
+  useEffect(() => {
     if (loading) return;
     if (!session || !isClient) {
       navigate("/start");
-      return;
     }
-    fetchServices();
-  }, [loading, session, isClient]);
+  }, [loading, session, isClient, navigate]);
 
   const fetchServices = async () => {
     const { data } = await supabase.from("pooja_services").select("id, name").order("name");
     if (data) setServices(data);
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-8">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   const onSubmit = async (data: FormData) => {
     if (!session?.profileId) return;
