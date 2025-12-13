@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { LocationAutocomplete } from "@/components/LocationAutocomplete";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin, Plus, X, Save, Globe } from "lucide-react";
+import { ArrowLeft, MapPin, Plus, X, Save, Globe, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from "@/lib/indianLocations";
 
@@ -71,6 +71,15 @@ export default function PurohitLocations() {
     setServiceableCities(serviceableCities.filter(c => c !== cityToRemove));
   };
 
+  const handleRemoveAll = () => {
+    if (purohitRecord?.city) {
+      setServiceableCities([purohitRecord.city.toUpperCase()]);
+      toast.success("Removed all cities except your primary city");
+    } else {
+      toast.error("Cannot remove all cities");
+    }
+  };
+
   const handleSave = async () => {
     if (serviceableCities.length === 0) {
       toast.error("Please add at least one city");
@@ -127,7 +136,20 @@ export default function PurohitLocations() {
           <CardContent className="space-y-6">
             {/* Current Cities */}
             <div>
-              <Label className="mb-3 block">Your Serviceable Cities</Label>
+              <div className="flex items-center justify-between mb-3">
+                <Label>Your Serviceable Cities ({serviceableCities.length})</Label>
+                {serviceableCities.length > 1 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleRemoveAll}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Remove All
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {serviceableCities.map((city) => (
                   <Badge 
@@ -146,7 +168,7 @@ export default function PurohitLocations() {
                   </Badge>
                 ))}
               </div>
-            {serviceableCities.length === 0 && (
+              {serviceableCities.length === 0 && (
                 <p className="text-sm text-muted-foreground">No cities added yet</p>
               )}
             </div>
