@@ -69,7 +69,8 @@ export default function Start() {
         profileName: profile.full_name,
       });
       toast.success(`Welcome, ${profile.full_name}!`);
-      navigate(selectedRole === 'client' ? '/client' : '/purohit');
+      // Clients go to request page, purohits go to dashboard
+      navigate(selectedRole === 'client' ? '/request' : '/purohit');
     }
   };
 
@@ -98,7 +99,8 @@ export default function Start() {
         profileName: data.full_name,
       });
       toast.success(`Profile created! Welcome, ${data.full_name}!`);
-      navigate(selectedRole === 'client' ? '/client' : '/purohit');
+      // Clients go to request page, purohits go to dashboard
+      navigate(selectedRole === 'client' ? '/request' : '/purohit');
     }
     setLoading(false);
   };
