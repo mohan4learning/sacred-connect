@@ -20,6 +20,7 @@ import RequestPooja from "./pages/RequestPooja";
 import PoojaRequestDetail from "./pages/PoojaRequestDetail";
 import PurohitCalendar from "./pages/PurohitCalendar";
 import PurohitLocations from "./pages/PurohitLocations";
+import AdminDashboard from "./pages/AdminDashboard";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/consultations/:id" element={<ConsultationDetail />} />
           <Route path="/request" element={<RequestPooja />} />
           <Route path="/request/:id" element={<PoojaRequestDetail />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/help" element={<Help />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
