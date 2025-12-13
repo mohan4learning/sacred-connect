@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ArrowLeft, Send, MessageSquare } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, IndianRupee } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,16 @@ export default function ConsultationDetail() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [quoteAmount, setQuoteAmount] = useState("");
+  const [updatingQuote, setUpdatingQuote] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Extract current quote from messages
+  const currentQuote = messages.reduce((quote, msg) => {
+    const match = msg.message_text.match(/Quote: ₹([\d,]+)/);
+    if (match) return match[1].replace(/,/g, '');
+    return quote;
+  }, "");
 
   useEffect(() => {
     if (id) {
@@ -52,6 +62,13 @@ export default function ConsultationDetail() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    // Initialize quote amount from current quote
+    if (currentQuote && !quoteAmount) {
+      setQuoteAmount(currentQuote);
+    }
+  }, [currentQuote]);
 
   const fetchConsultation = async () => {
     const { data, error } = await supabase
@@ -127,6 +144,26 @@ export default function ConsultationDetail() {
     }
   };
 
+  const handleUpdateQuote = async () => {
+    if (!quoteAmount || !session?.profileId) return;
+    setUpdatingQuote(true);
+
+    const { error } = await supabase.from("consultation_messages").insert({
+      consultation_id: id,
+      sender_role: session.role,
+      sender_id: session.profileId,
+      message_text: `Quote: ₹${parseInt(quoteAmount).toLocaleString()}`,
+    });
+
+    setUpdatingQuote(false);
+
+    if (error) {
+      toast.error("Failed to update quote");
+    } else {
+      toast.success("Quote updated");
+    }
+  };
+
   const updateStatus = async (newStatus: "requested" | "accepted" | "completed" | "cancelled") => {
     if (!consultation) return;
     const { error } = await supabase
@@ -173,10 +210,54 @@ export default function ConsultationDetail() {
               <StatusBadge status={consultation.status as any} />
             </div>
             <p className="text-sm text-muted-foreground">
-              with {otherParty.full_name} • Started {format(new Date(consultation.created_at), "MMM d, yyyy")}
+              with{" "}
+              {isClient ? (
+                <Link to={`/purohits/${otherParty.id}`} className="text-primary hover:underline">
+                  {otherParty.full_name}
+                </Link>
+              ) : (
+                <Link to="/client" className="text-primary hover:underline">
+                  {otherParty.full_name}
+                </Link>
+              )}{" "}
+              • Started {format(new Date(consultation.created_at), "MMM d, yyyy")}
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Quote Section - editable by purohit */}
+            {["requested", "accepted"].includes(consultation.status) && (
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <IndianRupee className="h-4 w-4 text-emerald-600" />
+                  <Label className="font-medium">Agreed Amount</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={quoteAmount}
+                    onChange={(e) => setQuoteAmount(e.target.value)}
+                    className="flex-1"
+                    disabled={!isPurohit}
+                  />
+                  {isPurohit && (
+                    <Button 
+                      size="sm" 
+                      onClick={handleUpdateQuote}
+                      disabled={updatingQuote || !quoteAmount}
+                    >
+                      {updatingQuote ? "Updating..." : "Update Quote"}
+                    </Button>
+                  )}
+                </div>
+                {currentQuote && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Current quote: ₹{parseInt(currentQuote).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+
             {isPurohit && consultation.status === "requested" && (
               <div className="flex gap-2">
                 <Button onClick={() => updateStatus("accepted")} size="sm">
