@@ -16,8 +16,6 @@ interface PurohitDetail {
   full_name: string;
   city: string;
   area: string | null;
-  phone: string | null;
-  email: string | null;
   languages: string[];
   experience_years: number;
   bio: string | null;
@@ -70,7 +68,7 @@ export default function PurohitProfile() {
     setLoading(true);
 
     const [purohitRes, servicesRes, portfolioRes, bookingsRes] = await Promise.all([
-      supabase.from('purohits').select('*').eq('id', id).single(),
+      supabase.from('purohits').select('id, full_name, city, area, bio, languages, experience_years, remote_pooja_available, in_person_available, avatar_url, is_verified, user_id').eq('id', id).single(),
       supabase.from('purohit_services').select(`
         id,
         price_min,
@@ -81,7 +79,7 @@ export default function PurohitProfile() {
       supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', id).eq('status', 'completed'),
     ]);
 
-    if (purohitRes.data) setPurohit(purohitRes.data);
+    if (purohitRes.data) setPurohit(purohitRes.data as PurohitDetail);
     if (servicesRes.data) {
       setServices(servicesRes.data.map((s: any) => ({
         id: s.pooja_services?.id,
