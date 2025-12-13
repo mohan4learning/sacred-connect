@@ -59,7 +59,7 @@ export function SearchAutocomplete({
       // Fetch purohits and services in parallel
       const [purohitsRes, servicesRes] = await Promise.all([
         supabase
-          .from('purohits')
+          .from('purohits_public')
           .select('id, full_name, city')
           .or(`full_name.ilike.%${query}%,city.ilike.%${query}%`)
           .limit(5),
