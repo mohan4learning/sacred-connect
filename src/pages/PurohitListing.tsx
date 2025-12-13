@@ -171,39 +171,39 @@ export default function PurohitListing() {
           </form>
 
           <div className="flex flex-wrap gap-3">
-            <Select value={cityFilter} onValueChange={setCityFilter}>
+            <Select value={cityFilter || "all"} onValueChange={(v) => setCityFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[150px]">
                 <MapPin className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="City" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Cities</SelectItem>
+                <SelectItem value="all">All Cities</SelectItem>
                 {cities.map(city => (
                   <SelectItem key={city} value={city}>{city}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
+            <Select value={serviceFilter || "all"} onValueChange={(v) => setServiceFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Service Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Services</SelectItem>
+                <SelectItem value="all">All Services</SelectItem>
                 {services.map(service => (
                   <SelectItem key={service.id} value={service.name}>{service.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={modeFilter} onValueChange={setModeFilter}>
+            <Select value={modeFilter || "all"} onValueChange={(v) => setModeFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[150px]">
                 <Video className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Modes</SelectItem>
+                <SelectItem value="all">All Modes</SelectItem>
                 <SelectItem value="remote">Remote</SelectItem>
                 <SelectItem value="in_person">In-Person</SelectItem>
               </SelectContent>
