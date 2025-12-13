@@ -389,6 +389,7 @@ export type Database = {
           phone: string | null
           remote_pooja_available: boolean | null
           service_radius_km: number | null
+          serviceable_cities: string[] | null
         }
         Insert: {
           area?: string | null
@@ -404,6 +405,7 @@ export type Database = {
           phone?: string | null
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
+          serviceable_cities?: string[] | null
         }
         Update: {
           area?: string | null
@@ -419,6 +421,7 @@ export type Database = {
           phone?: string | null
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
+          serviceable_cities?: string[] | null
         }
         Relationships: []
       }
