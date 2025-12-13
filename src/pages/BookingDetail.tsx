@@ -125,7 +125,12 @@ export default function BookingDetail() {
 
             <div className="border-t pt-4">
               <h3 className="font-semibold mb-2">{isClient ? "Purohit" : "Client"}</h3>
-              <p className="font-medium">{otherParty.full_name}</p>
+              <Link 
+                to={isClient ? `/purohits/${otherParty.id}` : "/client"} 
+                className="font-medium text-primary hover:underline"
+              >
+                {otherParty.full_name}
+              </Link>
               {otherParty.phone && (
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <Phone className="h-3 w-3" /> {otherParty.phone}
@@ -135,11 +140,6 @@ export default function BookingDetail() {
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <Mail className="h-3 w-3" /> {otherParty.email}
                 </p>
-              )}
-              {isClient && (
-                <Link to={`/purohits/${otherParty.id}`} className="text-primary text-sm hover:underline mt-1 inline-block">
-                  View Profile
-                </Link>
               )}
             </div>
 
