@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,11 +7,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LocationAutocomplete } from "@/components/LocationAutocomplete";
-import { ArrowLeft, Save, Camera, Loader2, User, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Camera, Loader2, User, Trash2, Check, X } from "lucide-react";
+import Cropper, { Area } from "react-easy-crop";
+
+// Helper function to create cropped image
+const createCroppedImage = async (
+  imageSrc: string,
+  pixelCrop: Area
+): Promise<Blob> => {
+  const image = new Image();
+  image.src = imageSrc;
+  
+  await new Promise((resolve) => {
+    image.onload = resolve;
+  });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  
+  if (!ctx) throw new Error("Could not get canvas context");
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Canvas toBlob failed"));
+      },
+      "image/jpeg",
+      0.9
+    );
+  });
+};
 
 export default function ClientProfile() {
   const navigate = useNavigate();
@@ -27,6 +73,13 @@ export default function ClientProfile() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // Crop state
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
   useEffect(() => {
     if (clientRecord) {
       setFullName(clientRecord.full_name || "");
@@ -38,9 +91,13 @@ export default function ClientProfile() {
     }
   }, [clientRecord]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -54,16 +111,41 @@ export default function ClientProfile() {
       return;
     }
 
+    // Create object URL for cropping
+    const imageUrl = URL.createObjectURL(file);
+    setImageToCrop(imageUrl);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCropDialogOpen(true);
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  const handleCropCancel = () => {
+    setCropDialogOpen(false);
+    if (imageToCrop) {
+      URL.revokeObjectURL(imageToCrop);
+    }
+    setImageToCrop(null);
+  };
+
+  const handleCropConfirm = async () => {
+    if (!imageToCrop || !croppedAreaPixels || !user) return;
+
     setUploadingAvatar(true);
+    setCropDialogOpen(false);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `clients/${user.id}/${Date.now()}.${fileExt}`;
+      // Create cropped image blob
+      const croppedBlob = await createCroppedImage(imageToCrop, croppedAreaPixels);
+      
+      const filePath = `clients/${user.id}/${Date.now()}.jpg`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, croppedBlob, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -79,6 +161,10 @@ export default function ClientProfile() {
       toast.error("Failed to upload photo");
     } finally {
       setUploadingAvatar(false);
+      if (imageToCrop) {
+        URL.revokeObjectURL(imageToCrop);
+      }
+      setImageToCrop(null);
     }
   };
 
@@ -213,7 +299,7 @@ export default function ClientProfile() {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={handleAvatarUpload}
+                    onChange={handleFileSelect}
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -302,6 +388,52 @@ export default function ClientProfile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Crop Dialog */}
+      <Dialog open={cropDialogOpen} onOpenChange={(open) => !open && handleCropCancel()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Crop Profile Photo</DialogTitle>
+          </DialogHeader>
+          <div className="relative h-80 bg-muted rounded-lg overflow-hidden">
+            {imageToCrop && (
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <Label className="text-sm">Zoom</Label>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="flex-1"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCropCancel}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button onClick={handleCropConfirm}>
+              <Check className="h-4 w-4 mr-2" />
+              Apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
