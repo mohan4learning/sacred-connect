@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Layout } from "@/components/layout/Layout";
-import { Search, MapPin, Video, Home, Building2, Star, Users, Calendar, Shield } from "lucide-react";
-
+import { SearchAutocomplete } from "@/components/SearchAutocomplete";
+import { MapPin, Video, Home, Building2, Star, Users, Calendar, Shield } from "lucide-react";
 const quickFilters = [
   { label: "Remote Pooja", icon: Video, color: "bg-violet-100 text-violet-700" },
   { label: "At Home", icon: Home, color: "bg-emerald-100 text-emerald-700" },
@@ -75,21 +74,22 @@ export default function Landing() {
             </div>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="max-w-xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search pooja or service..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 pr-4 h-14 text-lg bg-background text-foreground rounded-full shadow-lg border-0"
-                />
-                <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full btn-hero">
-                  Search
-                </Button>
-              </div>
-            </form>
+            <div className="max-w-xl mx-auto relative">
+              <SearchAutocomplete
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={() => handleSearch({ preventDefault: () => {} } as React.FormEvent)}
+                placeholder="Search pooja or purohit..."
+                inputClassName="pr-24 h-14 text-lg bg-background text-foreground rounded-full shadow-lg border-0"
+              />
+              <Button 
+                onClick={() => handleSearch({ preventDefault: () => {} } as React.FormEvent)} 
+                size="sm" 
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full btn-hero z-10"
+              >
+                Search
+              </Button>
+            </div>
           </div>
         </div>
       </section>

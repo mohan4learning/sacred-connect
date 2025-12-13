@@ -3,10 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Star, Video, Users, Clock, Search, Filter, Languages } from "lucide-react";
+import { SearchAutocomplete } from "@/components/SearchAutocomplete";
+import { MapPin, Star, Video, Users, Clock, Filter, Languages } from "lucide-react";
 
 interface Purohit {
   id: string;
@@ -157,18 +157,16 @@ export default function PurohitListing() {
 
         {/* Search & Filters */}
         <div className="bg-card rounded-xl border p-4 mb-6">
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, city, or service..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button type="submit" className="btn-hero">Search</Button>
-          </form>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <SearchAutocomplete
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onSearch={() => fetchPurohits()}
+              placeholder="Search by name, city, or service..."
+              className="flex-1"
+            />
+            <Button onClick={() => fetchPurohits()} className="btn-hero">Search</Button>
+          </div>
 
           <div className="flex flex-wrap gap-3">
             <Select value={cityFilter || "all"} onValueChange={(v) => setCityFilter(v === "all" ? "" : v)}>
