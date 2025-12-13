@@ -390,10 +390,7 @@ export default function PurohitDashboard() {
                           )}
                         </div>
                         
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {request.city}{request.area && `, ${request.area}`}
-                          <span className="mx-1">•</span>
+                        <p className="text-sm text-muted-foreground">
                           by {request.client_name}
                         </p>
                         
