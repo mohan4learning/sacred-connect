@@ -49,7 +49,8 @@ export default function PurohitProfile() {
   const [purohit, setPurohit] = useState<PurohitDetail | null>(null);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [bookingCount, setBookingCount] = useState(0);
+  const [avgRating, setAvgRating] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Consultation/Booking dialog state
@@ -69,7 +70,7 @@ export default function PurohitProfile() {
   const fetchPurohitData = async () => {
     setLoading(true);
 
-    const [purohitRes, servicesRes, portfolioRes, bookingsRes] = await Promise.all([
+    const [purohitRes, servicesRes, portfolioRes, ratingRes, countRes] = await Promise.all([
       supabase.from('purohits').select('id, full_name, city, area, bio, languages, experience_years, remote_pooja_available, in_person_available, temple_pooja_available, video_call_available, avatar_url, is_verified, user_id').eq('id', id).single(),
       supabase.from('purohit_services').select(`
         id,
@@ -78,7 +79,8 @@ export default function PurohitProfile() {
         pooja_services (id, name)
       `).eq('purohit_id', id),
       supabase.from('purohit_portfolio_items').select('*').eq('purohit_id', id),
-      supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', id).eq('status', 'completed'),
+      supabase.rpc('get_purohit_avg_rating', { p_purohit_id: id }),
+      supabase.rpc('get_purohit_review_count', { p_purohit_id: id }),
     ]);
 
     if (purohitRes.data) setPurohit(purohitRes.data as PurohitDetail);
@@ -91,18 +93,12 @@ export default function PurohitProfile() {
       })).filter((s: ServiceItem) => s.name));
     }
     if (portfolioRes.data) setPortfolio(portfolioRes.data);
-    setBookingCount(bookingsRes.count || 0);
+    setAvgRating(ratingRes.data || 0);
+    setReviewCount(countRes.data || 0);
     
     setLoading(false);
   };
 
-  const getRating = (count: number) => {
-    if (count >= 50) return 4.9;
-    if (count >= 20) return 4.7;
-    if (count >= 10) return 4.5;
-    if (count >= 5) return 4.3;
-    return 4.0;
-  };
 
   const handleStartConsultation = () => {
     if (!user || !isClient) {
@@ -219,8 +215,10 @@ export default function PurohitProfile() {
                   <h1 className="font-display text-2xl font-bold">{purohit.full_name}</h1>
                   <div className="flex items-center gap-1 text-amber-500">
                     <Star className="h-5 w-5 fill-current" />
-                    <span className="font-semibold">{getRating(bookingCount).toFixed(1)}</span>
-                    <span className="text-sm text-muted-foreground">({bookingCount} bookings)</span>
+                    <span className="font-semibold">{avgRating > 0 ? avgRating.toFixed(1) : 'New'}</span>
+                    {reviewCount > 0 && (
+                      <span className="text-sm text-muted-foreground">({reviewCount} reviews)</span>
+                    )}
                   </div>
                 </div>
 
