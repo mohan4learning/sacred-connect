@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useSession } from "@/hooks/useSession";
 import { Button } from "@/components/ui/button";
-import { Home, User, LogOut, Menu } from "lucide-react";
+import { Home, User, LogOut, Menu, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +44,10 @@ export function Header() {
           )}
           <Link to="/help" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Help
+          </Link>
+          <Link to="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+            <Shield className="h-3.5 w-3.5" />
+            Admin
           </Link>
         </nav>
 
