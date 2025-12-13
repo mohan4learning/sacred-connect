@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, Send, Clock, User, CheckCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, Send, Clock, User, CheckCircle, CalendarPlus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -53,6 +54,13 @@ export default function PoojaRequestDetail() {
   const [quoteAmount, setQuoteAmount] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedResponse, setSelectedResponse] = useState<ResponseData | null>(null);
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingTime, setBookingTime] = useState("");
+  const [bookingPrice, setBookingPrice] = useState("");
+  const [bookingNotes, setBookingNotes] = useState("");
+  const [creatingBooking, setCreatingBooking] = useState(false);
 
   useEffect(() => {
     if (!sessionLoading && !session) {
@@ -231,6 +239,71 @@ export default function PoojaRequestDetail() {
     }
   };
 
+  const handleOpenBookingDialog = (response: ResponseData) => {
+    setSelectedResponse(response);
+    // Pre-fill price from quote if available
+    const quoteMatch = response.quote?.match(/₹([\d,]+)/);
+    if (quoteMatch) {
+      setBookingPrice(quoteMatch[1].replace(/,/g, ''));
+    }
+    // Pre-fill date if available
+    if (request?.requested_date) {
+      setBookingDate(request.requested_date);
+    }
+    setBookingDialogOpen(true);
+  };
+
+  const handleCreateBooking = async () => {
+    if (!selectedResponse || !request || !session?.profileId) return;
+    
+    setCreatingBooking(true);
+    try {
+      const scheduledAt = bookingDate && bookingTime 
+        ? new Date(`${bookingDate}T${bookingTime}`).toISOString()
+        : bookingDate 
+        ? new Date(bookingDate).toISOString()
+        : null;
+
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          client_id: request.client_id,
+          purohit_id: selectedResponse.purohit_id,
+          mode: request.mode as any,
+          scheduled_at: scheduledAt,
+          city: request.city,
+          area: request.area,
+          address: request.address,
+          price_agreed: bookingPrice ? parseInt(bookingPrice) : null,
+          notes: bookingNotes || request.notes,
+          status: 'pending',
+        });
+
+      if (error) throw error;
+
+      // Update consultation status to completed
+      await supabase
+        .from('consultations')
+        .update({ status: 'completed' })
+        .eq('id', selectedResponse.id);
+
+      // Update request status to closed
+      await supabase
+        .from('pooja_requests')
+        .update({ status: 'closed' })
+        .eq('id', request.id);
+
+      toast.success("Booking created successfully!");
+      setBookingDialogOpen(false);
+      navigate('/bookings');
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast.error("Failed to create booking");
+    } finally {
+      setCreatingBooking(false);
+    }
+  };
+
   if (sessionLoading || loading) {
     return (
       <Layout>
@@ -389,32 +462,45 @@ export default function PoojaRequestDetail() {
                       <p className="text-sm text-muted-foreground">{response.message}</p>
                     )}
 
-                    {/* Accept button for client on open responses */}
-                    {isOwner && request.status === 'open' && response.status === 'requested' && (
-                      <Button 
-                        size="sm" 
-                        className="mt-3"
-                        onClick={() => handleAcceptResponse(response.id)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept & Proceed
-                      </Button>
-                    )}
+                    {/* Actions for responses */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {/* Accept button for client on open responses */}
+                      {isOwner && request.status === 'open' && response.status === 'requested' && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAcceptResponse(response.id)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Accept & Proceed
+                        </Button>
+                      )}
 
-                    {/* Chat link for accepted responses */}
-                    {response.status === 'accepted' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="mt-3"
-                        asChild
-                      >
-                        <Link to={`/consultations/${response.id}`}>
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Continue Chat
-                        </Link>
-                      </Button>
-                    )}
+                      {/* Discuss/Negotiate button - always available for both parties */}
+                      {['requested', 'accepted'].includes(response.status) && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          asChild
+                        >
+                          <Link to={`/consultations/${response.id}`}>
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Discuss / Negotiate
+                          </Link>
+                        </Button>
+                      )}
+
+                      {/* Create Booking button for client on accepted responses */}
+                      {isOwner && response.status === 'accepted' && (
+                        <Button 
+                          size="sm" 
+                          className="btn-hero"
+                          onClick={() => handleOpenBookingDialog(response)}
+                        >
+                          <CalendarPlus className="h-4 w-4 mr-2" />
+                          Create Booking
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -484,6 +570,74 @@ export default function PoojaRequestDetail() {
             </CardContent>
           </Card>
         )}
+        {/* Booking Dialog */}
+        <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Booking</DialogTitle>
+              <DialogDescription>
+                Finalize the booking with {selectedResponse?.purohit_name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="booking-date">Date</Label>
+                  <Input
+                    id="booking-date"
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="booking-time">Time</Label>
+                  <Input
+                    id="booking-time"
+                    type="time"
+                    value={bookingTime}
+                    onChange={(e) => setBookingTime(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="booking-price">Agreed Price (₹)</Label>
+                <Input
+                  id="booking-price"
+                  type="number"
+                  value={bookingPrice}
+                  onChange={(e) => setBookingPrice(e.target.value)}
+                  placeholder="Enter agreed amount"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="booking-notes">Notes (optional)</Label>
+                <Textarea
+                  id="booking-notes"
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  placeholder="Any special instructions..."
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+
+              <Button 
+                className="w-full btn-hero" 
+                onClick={handleCreateBooking}
+                disabled={creatingBooking || !bookingDate}
+              >
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                {creatingBooking ? 'Creating...' : 'Confirm Booking'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

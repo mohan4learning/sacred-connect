@@ -54,10 +54,12 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{session.profileName}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{session.role}</p>
-                </div>
+                <Link to={isClient ? "/client" : isPurohit ? "/purohit" : "/"}>
+                  <div className="px-2 py-1.5 hover:bg-muted rounded cursor-pointer">
+                    <p className="text-sm font-medium">{session.profileName}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{session.role}</p>
+                  </div>
+                </Link>
                 <DropdownMenuSeparator />
                 {isClient && (
                   <DropdownMenuItem asChild>
