@@ -135,7 +135,7 @@ export function SearchAutocomplete({
       />
 
       {showSuggestions && (value.trim().length >= 2 || suggestions.length > 0) && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-64 overflow-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-64 overflow-auto text-foreground">
           {loading ? (
             <div className="p-3 text-sm text-muted-foreground text-center">Searching...</div>
           ) : suggestions.length === 0 ? (
@@ -159,7 +159,7 @@ export function SearchAutocomplete({
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{suggestion.name}</p>
+                    <p className="text-sm font-medium text-foreground">{suggestion.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {suggestion.type === 'service' ? 'Pooja Service' : suggestion.subtitle}
                     </p>
