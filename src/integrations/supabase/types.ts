@@ -387,6 +387,7 @@ export type Database = {
       purohits: {
         Row: {
           area: string | null
+          avatar_url: string | null
           bio: string | null
           city: string
           created_at: string
@@ -403,6 +404,7 @@ export type Database = {
         }
         Insert: {
           area?: string | null
+          avatar_url?: string | null
           bio?: string | null
           city: string
           created_at?: string
@@ -419,6 +421,7 @@ export type Database = {
         }
         Update: {
           area?: string | null
+          avatar_url?: string | null
           bio?: string | null
           city?: string
           created_at?: string
@@ -432,6 +435,36 @@ export type Database = {
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          rating: number
+          review_text: string | null
+          reviewer_id: string
+          reviewer_role: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          rating: number
+          review_text?: string | null
+          reviewer_id: string
+          reviewer_role: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          review_text?: string | null
+          reviewer_id?: string
+          reviewer_role?: string
         }
         Relationships: []
       }
