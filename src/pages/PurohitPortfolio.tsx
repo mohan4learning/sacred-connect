@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Edit2, Camera, Image, Award, Quote, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, Camera, Image, Award, Quote, Upload, Home, Video, Building2, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 
 interface PortfolioItem {
   id: string;
@@ -25,6 +26,10 @@ interface PurohitProfile {
   id: string;
   full_name: string;
   avatar_url: string | null;
+  in_person_available: boolean | null;
+  remote_pooja_available: boolean | null;
+  temple_pooja_available: boolean | null;
+  video_call_available: boolean | null;
 }
 
 export default function PurohitPortfolio() {
@@ -41,6 +46,7 @@ export default function PurohitPortfolio() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingModes, setSavingModes] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -61,11 +67,33 @@ export default function PurohitPortfolio() {
   const fetchProfile = async () => {
     const { data } = await supabase
       .from('purohits')
-      .select('id, full_name, avatar_url')
+      .select('id, full_name, avatar_url, in_person_available, remote_pooja_available, temple_pooja_available, video_call_available')
       .eq('id', purohitRecord!.id)
       .single();
 
-    if (data) setProfile(data);
+    if (data) setProfile(data as PurohitProfile);
+  };
+
+  const handleToggleServiceMode = async (field: keyof PurohitProfile, value: boolean) => {
+    if (!profile) return;
+    
+    setSavingModes(true);
+    try {
+      const { error } = await supabase
+        .from('purohits')
+        .update({ [field]: value })
+        .eq('id', purohitRecord!.id);
+
+      if (error) throw error;
+      
+      setProfile(prev => prev ? { ...prev, [field]: value } : null);
+      toast.success("Service mode updated");
+    } catch (error) {
+      console.error('Error updating service mode:', error);
+      toast.error("Failed to update service mode");
+    } finally {
+      setSavingModes(false);
+    }
   };
 
   const fetchPortfolio = async () => {
@@ -327,6 +355,83 @@ export default function PurohitPortfolio() {
                 />
                 {uploadingAvatar && <p className="text-sm text-primary">Uploading...</p>}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Service Modes Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Service Modes</CardTitle>
+            <CardDescription>Select how you can provide pooja services to clients</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Home className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-medium">In-Person (Home Visit)</p>
+                  <p className="text-sm text-muted-foreground">Visit client's home for pooja</p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.in_person_available ?? false}
+                onCheckedChange={(checked) => handleToggleServiceMode('in_person_available', checked)}
+                disabled={savingModes}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-violet-100 rounded-lg">
+                  <Building2 className="h-5 w-5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Temple</p>
+                  <p className="text-sm text-muted-foreground">Conduct pooja at a temple</p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.temple_pooja_available ?? false}
+                onCheckedChange={(checked) => handleToggleServiceMode('temple_pooja_available', checked)}
+                disabled={savingModes}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Video className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Video Call</p>
+                  <p className="text-sm text-muted-foreground">Live pooja via video call</p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.video_call_available ?? false}
+                onCheckedChange={(checked) => handleToggleServiceMode('video_call_available', checked)}
+                disabled={savingModes}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Phone className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Remote (Phone Guidance)</p>
+                  <p className="text-sm text-muted-foreground">Guide client over phone call</p>
+                </div>
+              </div>
+              <Switch
+                checked={profile?.remote_pooja_available ?? false}
+                onCheckedChange={(checked) => handleToggleServiceMode('remote_pooja_available', checked)}
+                disabled={savingModes}
+              />
             </div>
           </CardContent>
         </Card>

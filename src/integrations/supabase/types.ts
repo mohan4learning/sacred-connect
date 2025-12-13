@@ -550,7 +550,9 @@ export type Database = {
           remote_pooja_available: boolean | null
           service_radius_km: number | null
           serviceable_cities: string[] | null
+          temple_pooja_available: boolean | null
           user_id: string | null
+          video_call_available: boolean | null
         }
         Insert: {
           area?: string | null
@@ -567,7 +569,9 @@ export type Database = {
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
+          temple_pooja_available?: boolean | null
           user_id?: string | null
+          video_call_available?: boolean | null
         }
         Update: {
           area?: string | null
@@ -584,7 +588,9 @@ export type Database = {
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
+          temple_pooja_available?: boolean | null
           user_id?: string | null
+          video_call_available?: boolean | null
         }
         Relationships: [
           {
