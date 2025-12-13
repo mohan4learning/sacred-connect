@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Home, User, LogOut, Menu, Shield } from "lucide-react";
 import {
@@ -11,16 +11,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Header() {
-  const { session, logout, isClient, isPurohit } = useSession();
+  const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const isClient = profile?.role === 'client';
+  const isPurohit = profile?.role === 'purohit';
+  const isAdmin = profile?.role === 'admin';
+
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
   // Determine home link based on role
-  const homeLink = isPurohit ? "/purohit" : isClient ? "/client" : "/";
+  const homeLink = isAdmin ? "/admin" : isPurohit ? "/purohit" : isClient ? "/client" : "/";
+  
+  // Get display name
+  const displayName = profile?.full_name || user?.email || 'User';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -66,8 +73,15 @@ export function Header() {
               </Link>
             </>
           )}
+          {/* Admin links */}
+          {isAdmin && (
+            <Link to="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <Shield className="h-3.5 w-3.5" />
+              Dashboard
+            </Link>
+          )}
           {/* Public links when not logged in */}
-          {!session && (
+          {!user && (
             <>
               <Link to="/purohits" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Find Purohits
@@ -80,27 +94,23 @@ export function Header() {
           <Link to="/help" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Help
           </Link>
-          <Link to="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-            <Shield className="h-3.5 w-3.5" />
-            Admin
-          </Link>
         </nav>
 
         <div className="flex items-center gap-4">
-          {session ? (
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                   <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">{session.profileName}</span>
+                  <span className="hidden sm:inline">{displayName}</span>
                   <Menu className="h-4 w-4 sm:hidden" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <Link to={isClient ? "/client" : isPurohit ? "/purohit" : "/"}>
+                <Link to={homeLink}>
                   <div className="px-2 py-1.5 hover:bg-muted rounded cursor-pointer">
-                    <p className="text-sm font-medium">{session.profileName}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{session.role}</p>
+                    <p className="text-sm font-medium">{displayName}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{profile?.role}</p>
                   </div>
                 </Link>
                 <DropdownMenuSeparator />
@@ -114,6 +124,11 @@ export function Header() {
                     <Link to="/purohit">My Dashboard</Link>
                   </DropdownMenuItem>
                 )}
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">Admin Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link to="/bookings">Bookings</Link>
                 </DropdownMenuItem>
@@ -123,13 +138,13 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="h-4 w-4 mr-2" />
-                  Switch Role / Logout
+                  Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button asChild size="sm" className="btn-hero">
-              <Link to="/start">Get Started</Link>
+              <Link to="/auth">Sign In</Link>
             </Button>
           )}
         </div>

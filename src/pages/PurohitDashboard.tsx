@@ -1,28 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
-import { Edit, MessageSquare, Calendar, Clock, MapPin, Video, Users, Sparkles, IndianRupee, MapPinned } from "lucide-react";
+import { Edit, MessageSquare, Calendar, Clock, MapPin, Video, Users, Sparkles, IndianRupee, MapPinned, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-
-interface PurohitData {
-  id: string;
-  full_name: string;
-  city: string;
-  area: string | null;
-  bio: string | null;
-  experience_years: number;
-  languages: string[];
-  remote_pooja_available: boolean;
-  in_person_available: boolean;
-  serviceable_cities: string[];
-}
 
 interface UpcomingBooking {
   id: string;
@@ -50,10 +37,22 @@ interface PoojaRequest {
   response_count: number;
 }
 
+interface PurohitData {
+  id: string;
+  full_name: string;
+  city: string;
+  area?: string | null;
+  bio?: string | null;
+  experience_years?: number | null;
+  languages?: string[] | null;
+  remote_pooja_available?: boolean | null;
+  in_person_available?: boolean | null;
+  serviceable_cities?: string[] | null;
+}
+
 export default function PurohitDashboard() {
-  const { session, loading: sessionLoading, isPurohit } = useSession();
-  const navigate = useNavigate();
-  const [purohit, setPurohit] = useState<PurohitData | null>(null);
+  const { profile, purohitRecord, loading } = useAuth();
+  const [purohitData, setPurohitData] = useState<PurohitData | null>(null);
   const [upcomingBookings, setUpcomingBookings] = useState<UpcomingBooking[]>([]);
   const [openRequests, setOpenRequests] = useState<PoojaRequest[]>([]);
   const [stats, setStats] = useState({ 
@@ -65,36 +64,33 @@ export default function PurohitDashboard() {
   });
   const [portfolioCompletion, setPortfolioCompletion] = useState(0);
 
+  // Fetch full purohit data when purohitRecord is available
   useEffect(() => {
-    if (!sessionLoading && (!session || !isPurohit)) {
-      navigate('/start');
+    if (purohitRecord?.id) {
+      fetchFullPurohitData();
     }
-  }, [session, sessionLoading, isPurohit, navigate]);
+  }, [purohitRecord?.id]);
 
   useEffect(() => {
-    if (session?.profileId) {
-      fetchPurohitData();
-    }
-  }, [session?.profileId]);
-
-  useEffect(() => {
-    if (session?.profileId && purohit) {
+    if (purohitData) {
+      calculatePortfolioCompletion(purohitData);
       fetchStats();
       fetchUpcomingBookings();
       fetchOpenRequests();
     }
-  }, [session?.profileId, purohit?.city]);
+  }, [purohitData?.id]);
 
-  const fetchPurohitData = async () => {
+  const fetchFullPurohitData = async () => {
+    if (!purohitRecord?.id) return;
+    
     const { data } = await supabase
       .from('purohits')
       .select('*')
-      .eq('id', session!.profileId)
+      .eq('id', purohitRecord.id)
       .single();
     
     if (data) {
-      setPurohit(data);
-      calculatePortfolioCompletion(data);
+      setPurohitData(data as PurohitData);
     }
   };
 
@@ -103,13 +99,15 @@ export default function PurohitDashboard() {
     if (data.full_name) score += 15;
     if (data.city) score += 15;
     if (data.bio) score += 20;
-    if (data.languages.length > 0) score += 15;
-    if (data.experience_years > 0) score += 15;
+    if (data.languages && data.languages.length > 0) score += 15;
+    if (data.experience_years && data.experience_years > 0) score += 15;
     if (data.remote_pooja_available || data.in_person_available) score += 20;
     setPortfolioCompletion(score);
   };
 
   const fetchStats = async () => {
+    if (!purohitData?.id) return;
+    
     const [
       totalBookingsRes, 
       pendingBookingsRes, 
@@ -117,11 +115,11 @@ export default function PurohitDashboard() {
       portfolioRes,
       servicesRes
     ] = await Promise.all([
-      supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
-      supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId).eq('status', 'pending'),
-      supabase.from('consultations').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId).eq('status', 'requested'),
-      supabase.from('purohit_portfolio_items').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
-      supabase.from('purohit_services').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
+      supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', purohitData.id),
+      supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', purohitData.id).eq('status', 'pending'),
+      supabase.from('consultations').select('id', { count: 'exact' }).eq('purohit_id', purohitData.id).eq('status', 'requested'),
+      supabase.from('purohit_portfolio_items').select('id', { count: 'exact' }).eq('purohit_id', purohitData.id),
+      supabase.from('purohit_services').select('id', { count: 'exact' }).eq('purohit_id', purohitData.id),
     ]);
 
     setStats({
@@ -134,11 +132,11 @@ export default function PurohitDashboard() {
   };
 
   const fetchOpenRequests = async () => {
-    if (!purohit) return;
+    if (!purohitData) return;
     
-    const serviceableCities = purohit.serviceable_cities?.length > 0 
-      ? purohit.serviceable_cities 
-      : [purohit.city];
+    const serviceableCities = purohitData.serviceable_cities && purohitData.serviceable_cities.length > 0 
+      ? purohitData.serviceable_cities 
+      : [purohitData.city];
     
     // Fetch open requests matching purohit's serviceable cities
     const { data } = await supabase
@@ -186,6 +184,8 @@ export default function PurohitDashboard() {
   };
 
   const fetchUpcomingBookings = async () => {
+    if (!purohitData?.id) return;
+    
     const { data } = await supabase
       .from('bookings')
       .select(`
@@ -193,7 +193,7 @@ export default function PurohitDashboard() {
         clients (full_name),
         pooja_services (name)
       `)
-      .eq('purohit_id', session!.profileId)
+      .eq('purohit_id', purohitData.id)
       .in('status', ['pending', 'confirmed'])
       .gte('scheduled_at', new Date().toISOString())
       .order('scheduled_at', { ascending: true })
@@ -211,7 +211,7 @@ export default function PurohitDashboard() {
     }
   };
 
-  if (sessionLoading || !purohit) {
+  if (loading || !purohitData) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">
@@ -229,18 +229,18 @@ export default function PurohitDashboard() {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="font-display text-2xl">{purohit.full_name}</CardTitle>
+                <CardTitle className="font-display text-2xl">{purohitData.full_name}</CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <MapPin className="h-4 w-4" />
-                  {purohit.city}{purohit.area && `, ${purohit.area}`}
+                  {purohitData.city}{purohitData.area && `, ${purohitData.area}`}
                 </CardDescription>
                 <div className="flex gap-2 mt-2">
-                  {purohit.remote_pooja_available && (
+                  {purohitData.remote_pooja_available && (
                     <span className="inline-flex items-center gap-1 text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
                       <Video className="h-3 w-3" /> Remote Available
                     </span>
                   )}
-                  {purohit.in_person_available && (
+                  {purohitData.in_person_available && (
                     <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
                       <Users className="h-3 w-3" /> In-Person
                     </span>
@@ -347,8 +347,8 @@ export default function PurohitDashboard() {
               </CardTitle>
               <CardDescription>
                 Clients looking for purohits in your serviceable areas
-                {purohit?.serviceable_cities && purohit.serviceable_cities.length > 0 && (
-                  <span className="ml-1">({purohit.serviceable_cities.join(', ')})</span>
+                {purohitData?.serviceable_cities && purohitData.serviceable_cities.length > 0 && (
+                  <span className="ml-1">({purohitData.serviceable_cities.join(', ')})</span>
                 )}
               </CardDescription>
             </div>
@@ -441,22 +441,28 @@ export default function PurohitDashboard() {
 
         {/* Upcoming Bookings */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
             <div>
-              <CardTitle>Upcoming Bookings</CardTitle>
-              <CardDescription>Your scheduled appointments</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                Upcoming Bookings
+              </CardTitle>
+              <CardDescription>Your scheduled ceremonies</CardDescription>
             </div>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/purohit/calendar">View Calendar →</Link>
+              <Link to="/bookings" className="flex items-center gap-1">
+                View All <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           </CardHeader>
           <CardContent>
             {upcomingBookings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No upcoming bookings. Complete your portfolio to receive more requests!
-              </p>
+              <div className="text-center py-8">
+                <Calendar className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">No upcoming bookings</p>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {upcomingBookings.map((booking) => (
                   <Link
                     key={booking.id}
@@ -482,7 +488,7 @@ export default function PurohitDashboard() {
                       <StatusBadge status={booking.status as any} />
                       {booking.scheduled_at && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(booking.scheduled_at), 'MMM d, h:mm a')}
+                          {format(new Date(booking.scheduled_at), 'MMM d, yyyy h:mm a')}
                         </p>
                       )}
                     </div>

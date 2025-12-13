@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, MessageSquare, Calendar, MapPin, Clock, FileText, Users, Video, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
-
-interface ClientData {
-  id: string;
-  full_name: string;
-  city: string;
-  area: string | null;
-  phone: string | null;
-  email: string | null;
-}
 
 interface RecentBooking {
   id: string;
@@ -42,42 +33,25 @@ interface ActiveRequest {
 }
 
 export default function ClientDashboard() {
-  const { session, loading: sessionLoading, isClient } = useSession();
-  const navigate = useNavigate();
-  const [client, setClient] = useState<ClientData | null>(null);
+  const { profile, clientRecord, loading } = useAuth();
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [activeRequests, setActiveRequests] = useState<ActiveRequest[]>([]);
   const [stats, setStats] = useState({ bookings: 0, consultations: 0, requests: 0 });
 
   useEffect(() => {
-    if (!sessionLoading && (!session || !isClient)) {
-      navigate('/start');
-    }
-  }, [session, sessionLoading, isClient, navigate]);
-
-  useEffect(() => {
-    if (session?.profileId) {
-      fetchClientData();
+    if (clientRecord?.id) {
       fetchStats();
       fetchRecentBookings();
       fetchActiveRequests();
     }
-  }, [session?.profileId]);
-
-  const fetchClientData = async () => {
-    const { data } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('id', session!.profileId)
-      .single();
-    
-    if (data) setClient(data);
-  };
+  }, [clientRecord?.id]);
 
   const fetchStats = async () => {
+    if (!clientRecord?.id) return;
+    
     const [activeBookingsRes, requestsRes] = await Promise.all([
-      supabase.from('bookings').select('id', { count: 'exact' }).eq('client_id', session!.profileId).in('status', ['pending', 'confirmed']),
-      supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('client_id', session!.profileId).in('status', ['open', 'matched']),
+      supabase.from('bookings').select('id', { count: 'exact' }).eq('client_id', clientRecord.id).in('status', ['pending', 'confirmed']),
+      supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('client_id', clientRecord.id).in('status', ['open', 'matched']),
     ]);
 
     setStats({
@@ -88,6 +62,8 @@ export default function ClientDashboard() {
   };
 
   const fetchRecentBookings = async () => {
+    if (!clientRecord?.id) return;
+    
     const { data } = await supabase
       .from('bookings')
       .select(`
@@ -95,7 +71,7 @@ export default function ClientDashboard() {
         purohits (full_name),
         pooja_services (name)
       `)
-      .eq('client_id', session!.profileId)
+      .eq('client_id', clientRecord.id)
       .in('status', ['pending', 'confirmed'])
       .order('created_at', { ascending: false })
       .limit(5);
@@ -114,6 +90,8 @@ export default function ClientDashboard() {
   };
 
   const fetchActiveRequests = async () => {
+    if (!clientRecord?.id) return;
+    
     // Fetch active requests
     const { data: requests } = await supabase
       .from('pooja_requests')
@@ -121,7 +99,7 @@ export default function ClientDashboard() {
         id, status, city, mode, requested_date, created_at, custom_service_text,
         pooja_services (name)
       `)
-      .eq('client_id', session!.profileId)
+      .eq('client_id', clientRecord.id)
       .in('status', ['open', 'matched'])
       .order('created_at', { ascending: false })
       .limit(5);
@@ -153,7 +131,7 @@ export default function ClientDashboard() {
     }
   };
 
-  if (sessionLoading || !client) {
+  if (loading || !clientRecord) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">
@@ -171,10 +149,10 @@ export default function ClientDashboard() {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="font-display text-2xl">{client.full_name}</CardTitle>
+                <CardTitle className="font-display text-2xl">{clientRecord.full_name}</CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <MapPin className="h-4 w-4" />
-                  {client.city}{client.area && `, ${client.area}`}
+                  {clientRecord.city}{clientRecord.area && `, ${clientRecord.area}`}
                 </CardDescription>
               </div>
               <Button variant="outline" size="sm" asChild>
