@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, Send } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, Send, Clock, User } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 interface PoojaRequestData {
   id: string;
@@ -31,11 +32,22 @@ interface PoojaRequestData {
   created_at: string;
 }
 
+interface ConsultationResponse {
+  id: string;
+  purohit_id: string;
+  purohit_name: string;
+  status: string;
+  created_at: string;
+  first_message: string | null;
+}
+
 export default function PoojaRequestDetail() {
   const { id } = useParams<{ id: string }>();
   const { session, loading: sessionLoading, isPurohit } = useSession();
   const navigate = useNavigate();
   const [request, setRequest] = useState<PoojaRequestData | null>(null);
+  const [responses, setResponses] = useState<ConsultationResponse[]>([]);
+  const [hasResponded, setHasResponded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [quoteAmount, setQuoteAmount] = useState("");
   const [message, setMessage] = useState("");
@@ -50,6 +62,7 @@ export default function PoojaRequestDetail() {
   useEffect(() => {
     if (id) {
       fetchRequest();
+      fetchResponses();
     }
   }, [id]);
 
@@ -89,6 +102,50 @@ export default function PoojaRequestDetail() {
       created_at: data.created_at,
     });
     setLoading(false);
+  };
+
+  const fetchResponses = async () => {
+    if (!session?.profileId) return;
+    
+    // Note: Using service_id to link consultations to pooja requests
+    // This assumes service_id in consultations is used to reference pooja_requests
+    // For now, we'll fetch all consultations for this client and check if current purohit has responded
+    const { data: consultations } = await supabase
+      .from('consultations')
+      .select(`
+        id, purohit_id, status, created_at,
+        purohits (full_name)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (consultations) {
+      // Check if current purohit has already responded
+      const myResponse = consultations.find((c: any) => c.purohit_id === session.profileId);
+      setHasResponded(!!myResponse);
+
+      // Get first message for each consultation
+      const responsesWithMessages = await Promise.all(
+        consultations.slice(0, 10).map(async (c: any) => {
+          const { data: messages } = await supabase
+            .from('consultation_messages')
+            .select('message_text')
+            .eq('consultation_id', c.id)
+            .order('created_at', { ascending: true })
+            .limit(1);
+
+          return {
+            id: c.id,
+            purohit_id: c.purohit_id,
+            purohit_name: c.purohits?.full_name || 'Unknown Purohit',
+            status: c.status,
+            created_at: c.created_at,
+            first_message: messages?.[0]?.message_text || null,
+          };
+        })
+      );
+
+      setResponses(responsesWithMessages);
+    }
   };
 
   const handleStartConsultation = async () => {
@@ -249,8 +306,43 @@ export default function PoojaRequestDetail() {
           </CardContent>
         </Card>
 
+        {/* Responses History */}
+        {responses.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Responses ({responses.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {responses.map((response) => (
+                  <div key={response.id} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{response.purohit_name}</span>
+                        {response.purohit_id === session?.profileId && (
+                          <Badge variant="outline" className="text-xs">You</Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(response.created_at), 'MMM d, h:mm a')}
+                      </span>
+                    </div>
+                    {response.first_message && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{response.first_message}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Response Card */}
-        {request.status === 'open' && (
+        {request.status === 'open' && !hasResponded && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

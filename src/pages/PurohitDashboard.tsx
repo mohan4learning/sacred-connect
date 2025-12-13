@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
-import { Edit, MessageSquare, Calendar, Clock, MapPin, Video, Users, Sparkles, IndianRupee } from "lucide-react";
+import { Edit, MessageSquare, Calendar, Clock, MapPin, Video, Users, Sparkles, IndianRupee, MapPinned } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,6 +21,7 @@ interface PurohitData {
   languages: string[];
   remote_pooja_available: boolean;
   in_person_available: boolean;
+  serviceable_cities: string[];
 }
 
 interface UpcomingBooking {
@@ -39,11 +40,14 @@ interface PoojaRequest {
   client_name: string;
   city: string;
   area: string | null;
+  address: string | null;
   mode: string;
   requested_date: string | null;
   budget_min: number | null;
   budget_max: number | null;
+  notes: string | null;
   created_at: string;
+  response_count: number;
 }
 
 export default function PurohitDashboard() {
@@ -57,8 +61,7 @@ export default function PurohitDashboard() {
     pendingBookings: 0, 
     consultations: 0,
     portfolioItems: 0,
-    services: 0,
-    openRequests: 0
+    services: 0
   });
   const [portfolioCompletion, setPortfolioCompletion] = useState(0);
 
@@ -112,15 +115,13 @@ export default function PurohitDashboard() {
       pendingBookingsRes, 
       consultationsRes, 
       portfolioRes,
-      servicesRes,
-      openRequestsRes
+      servicesRes
     ] = await Promise.all([
       supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
       supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId).eq('status', 'pending'),
       supabase.from('consultations').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId).eq('status', 'requested'),
       supabase.from('purohit_portfolio_items').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
       supabase.from('purohit_services').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
-      supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('status', 'open'),
     ]);
 
     setStats({
@@ -129,27 +130,42 @@ export default function PurohitDashboard() {
       consultations: consultationsRes.count || 0,
       portfolioItems: portfolioRes.count || 0,
       services: servicesRes.count || 0,
-      openRequests: openRequestsRes.count || 0,
     });
   };
 
   const fetchOpenRequests = async () => {
     if (!purohit) return;
     
-    // Fetch open requests matching purohit's city
+    const serviceableCities = purohit.serviceable_cities?.length > 0 
+      ? purohit.serviceable_cities 
+      : [purohit.city];
+    
+    // Fetch open requests matching purohit's serviceable cities
     const { data } = await supabase
       .from('pooja_requests')
       .select(`
-        id, mode, requested_date, budget_min, budget_max, city, area, created_at, custom_service_text,
+        id, mode, requested_date, budget_min, budget_max, city, area, address, notes, created_at, custom_service_text,
         clients (full_name),
         pooja_services (name)
       `)
       .eq('status', 'open')
-      .eq('city', purohit.city)
+      .in('city', serviceableCities)
       .order('created_at', { ascending: false })
       .limit(10);
 
     if (data) {
+      // Fetch response counts for each request
+      const requestIds = data.map((r: any) => r.id);
+      const { data: consultations } = await supabase
+        .from('consultations')
+        .select('id, service_id')
+        .in('service_id', requestIds);
+      
+      const responseCounts: Record<string, number> = {};
+      consultations?.forEach((c: any) => {
+        responseCounts[c.service_id] = (responseCounts[c.service_id] || 0) + 1;
+      });
+
       setOpenRequests(data.map((r: any) => ({
         id: r.id,
         service_name: r.pooja_services?.name || null,
@@ -157,11 +173,14 @@ export default function PurohitDashboard() {
         client_name: r.clients?.full_name || 'Unknown',
         city: r.city,
         area: r.area,
+        address: r.address,
         mode: r.mode,
         requested_date: r.requested_date,
         budget_min: r.budget_min,
         budget_max: r.budget_max,
+        notes: r.notes,
         created_at: r.created_at,
+        response_count: responseCounts[r.id] || 0,
       })));
     }
   };
@@ -251,7 +270,7 @@ export default function PurohitDashboard() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold text-primary">{stats.totalBookings}</div>
                 <div className="text-sm text-muted-foreground">Total Bookings</div>
@@ -264,10 +283,6 @@ export default function PurohitDashboard() {
                 <div className="text-2xl font-bold text-violet-600">{stats.consultations}</div>
                 <div className="text-sm text-violet-600">Consultation Requests</div>
               </div>
-              <div className="p-4 rounded-lg bg-saffron-50 border border-saffron-200">
-                <div className="text-2xl font-bold text-saffron-600">{stats.openRequests}</div>
-                <div className="text-sm text-saffron-600">Open Gigs</div>
-              </div>
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold text-primary">{stats.services}</div>
                 <div className="text-sm text-muted-foreground">Services</div>
@@ -277,11 +292,17 @@ export default function PurohitDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
           <Button asChild size="lg" className="h-auto py-6 flex-col gap-2 btn-hero">
             <Link to="/purohit/edit">
               <Edit className="h-6 w-6" />
               <span>Edit Portfolio</span>
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
+            <Link to="/purohit/locations">
+              <MapPinned className="h-6 w-6" />
+              <span>Service Areas</span>
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
@@ -310,7 +331,7 @@ export default function PurohitDashboard() {
           </Button>
         </div>
 
-        {/* Open Pooja Requests (Gigs) */}
+        {/* Open Pooja Requests */}
         <Card className="mb-8">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -318,14 +339,27 @@ export default function PurohitDashboard() {
                 <Sparkles className="h-5 w-5 text-saffron-500" />
                 Open Pooja Requests
               </CardTitle>
-              <CardDescription>Clients looking for purohits in your area</CardDescription>
+              <CardDescription>
+                Clients looking for purohits in your serviceable areas
+                {purohit?.serviceable_cities && purohit.serviceable_cities.length > 0 && (
+                  <span className="ml-1">({purohit.serviceable_cities.join(', ')})</span>
+                )}
+              </CardDescription>
             </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/purohit/locations">Manage Areas →</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             {openRequests.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No open requests in your area right now. Check back later!
-              </p>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-2">
+                  No open requests in your serviceable areas right now.
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/purohit/locations">Add More Service Areas</Link>
+                </Button>
+              </div>
             ) : (
               <div className="space-y-4">
                 {openRequests.map((request) => (
@@ -334,20 +368,30 @@ export default function PurohitDashboard() {
                     to={`/pooja-requests/${request.id}`}
                     className="block p-4 rounded-lg border hover:bg-muted/50 transition-colors hover:border-saffron-300 cursor-pointer group"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <p className="font-medium group-hover:text-primary transition-colors">
                             {request.service_name || request.custom_service_text || 'Pooja Service'}
                           </p>
                           <Badge variant={request.mode === 'remote' ? 'secondary' : 'outline'} className="text-xs">
                             {request.mode === 'remote' ? 'Remote' : request.mode === 'in_person' ? 'In-Person' : 'Both'}
                           </Badge>
+                          {request.response_count > 0 && (
+                            <Badge variant="outline" className="text-xs bg-violet-50 text-violet-600 border-violet-200">
+                              {request.response_count} {request.response_count === 1 ? 'response' : 'responses'}
+                            </Badge>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          by {request.client_name} • {request.city}{request.area && `, ${request.area}`}
+                        
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {request.city}{request.area && `, ${request.area}`}
+                          <span className="mx-1">•</span>
+                          by {request.client_name}
                         </p>
-                        <div className="flex items-center gap-4 mt-2 text-sm">
+                        
+                        <div className="flex items-center gap-4 mt-2 text-sm flex-wrap">
                           {request.requested_date && (
                             <span className="flex items-center gap-1 text-muted-foreground">
                               <Calendar className="h-3 w-3" />
@@ -355,7 +399,7 @@ export default function PurohitDashboard() {
                             </span>
                           )}
                           {(request.budget_min || request.budget_max) && (
-                            <span className="flex items-center gap-1 text-emerald-600">
+                            <span className="flex items-center gap-1 text-emerald-600 font-medium">
                               <IndianRupee className="h-3 w-3" />
                               {request.budget_min && request.budget_max
                                 ? `${request.budget_min.toLocaleString()} - ${request.budget_max.toLocaleString()}`
@@ -365,14 +409,21 @@ export default function PurohitDashboard() {
                             </span>
                           )}
                         </div>
+                        
+                        {request.notes && (
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            {request.notes}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(request.created_at), 'MMM d')}
                         </span>
-                        <span className="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                          View & Respond <MessageSquare className="h-3 w-3" />
-                        </span>
+                        <Button size="sm" variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          Respond
+                        </Button>
                       </div>
                     </div>
                   </Link>
