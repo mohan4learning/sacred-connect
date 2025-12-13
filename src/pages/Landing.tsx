@@ -77,7 +77,7 @@ export default function Landing() {
               <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90 font-semibold shadow-lg">
                 <Link to="/auth">I'm a Client</Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
+              <Button asChild size="lg" variant="outline" className="border-2 border-foreground bg-background text-foreground hover:bg-background/90">
                 <Link to="/auth">I'm a Purohit</Link>
               </Button>
             </div>
