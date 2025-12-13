@@ -164,6 +164,7 @@ export type Database = {
           created_at: string
           id: string
           mode: Database["public"]["Enums"]["service_mode"] | null
+          pooja_request_id: string | null
           purohit_id: string
           service_id: string | null
           status: Database["public"]["Enums"]["consultation_status"] | null
@@ -173,6 +174,7 @@ export type Database = {
           created_at?: string
           id?: string
           mode?: Database["public"]["Enums"]["service_mode"] | null
+          pooja_request_id?: string | null
           purohit_id: string
           service_id?: string | null
           status?: Database["public"]["Enums"]["consultation_status"] | null
@@ -182,6 +184,7 @@ export type Database = {
           created_at?: string
           id?: string
           mode?: Database["public"]["Enums"]["service_mode"] | null
+          pooja_request_id?: string | null
           purohit_id?: string
           service_id?: string | null
           status?: Database["public"]["Enums"]["consultation_status"] | null
@@ -192,6 +195,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultations_pooja_request_id_fkey"
+            columns: ["pooja_request_id"]
+            isOneToOne: false
+            referencedRelation: "pooja_requests"
             referencedColumns: ["id"]
           },
           {

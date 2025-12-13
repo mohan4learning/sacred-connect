@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Start from "./pages/Start";
 import ClientDashboard from "./pages/ClientDashboard";
+import ClientPoojaRequests from "./pages/ClientPoojaRequests";
 import PurohitDashboard from "./pages/PurohitDashboard";
 import PurohitListing from "./pages/PurohitListing";
 import PurohitProfile from "./pages/PurohitProfile";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/start" element={<Start />} />
           <Route path="/client" element={<ClientDashboard />} />
+          <Route path="/client/requests" element={<ClientPoojaRequests />} />
           <Route path="/purohit" element={<PurohitDashboard />} />
           <Route path="/purohit/calendar" element={<PurohitCalendar />} />
           <Route path="/purohit/locations" element={<PurohitLocations />} />
@@ -42,7 +44,7 @@ const App = () => (
           <Route path="/consultations" element={<Consultations />} />
           <Route path="/consultations/:id" element={<ConsultationDetail />} />
           <Route path="/request" element={<RequestPooja />} />
-          <Route path="/pooja-requests/:id" element={<PoojaRequestDetail />} />
+          <Route path="/request/:id" element={<PoojaRequestDetail />} />
           <Route path="/help" element={<Help />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
