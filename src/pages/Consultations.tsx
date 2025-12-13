@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Archive } from "lucide-react";
 import { format } from "date-fns";
 
 interface Consultation {
@@ -45,34 +46,65 @@ export default function Consultations() {
     setLoading(false);
   };
 
+  const activeConsultations = consultations.filter(c => ['requested', 'accepted'].includes(c.status));
+  const pastConsultations = consultations.filter(c => ['completed', 'cancelled'].includes(c.status));
+
+  const ConsultationCard = ({ c }: { c: Consultation }) => (
+    <Link key={c.id} to={`/consultations/${c.id}`}>
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-medium">{c.service_name || 'General Consultation'}</p>
+              <p className="text-sm text-muted-foreground">{isClient ? `with ${c.purohit_name}` : `from ${c.client_name}`}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <StatusBadge status={c.status as any} />
+            <p className="text-xs text-muted-foreground mt-1">{format(new Date(c.created_at), 'MMM d, yyyy')}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+
   return (
     <Layout>
       <div className="container py-8">
         <h1 className="font-display text-3xl font-bold mb-6">Consultations</h1>
-        {loading ? <p className="text-muted-foreground">Loading...</p> : consultations.length === 0 ? (
-          <p className="text-muted-foreground">No consultations yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {consultations.map((c) => (
-              <Link key={c.id} to={`/consultations/${c.id}`}>
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-medium">{c.service_name || 'General Consultation'}</p>
-                        <p className="text-sm text-muted-foreground">{isClient ? `with ${c.purohit_name}` : `from ${c.client_name}`}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <StatusBadge status={c.status as any} />
-                      <p className="text-xs text-muted-foreground mt-1">{format(new Date(c.created_at), 'MMM d, yyyy')}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+        {loading ? <p className="text-muted-foreground">Loading...</p> : (
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active">
+                Active ({activeConsultations.length})
+              </TabsTrigger>
+              <TabsTrigger value="past" className="flex items-center gap-1">
+                <Archive className="h-4 w-4" />
+                Past ({pastConsultations.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="active">
+              {activeConsultations.length === 0 ? (
+                <p className="text-muted-foreground py-8 text-center">No active consultations.</p>
+              ) : (
+                <div className="space-y-4">
+                  {activeConsultations.map((c) => <ConsultationCard key={c.id} c={c} />)}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="past">
+              {pastConsultations.length === 0 ? (
+                <p className="text-muted-foreground py-8 text-center">No past consultations.</p>
+              ) : (
+                <div className="space-y-4">
+                  {pastConsultations.map((c) => <ConsultationCard key={c.id} c={c} />)}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </Layout>

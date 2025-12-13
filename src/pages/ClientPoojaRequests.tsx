@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, MessageSquare, Plus } from "lucide-react";
+import { Calendar, MapPin, MessageSquare, Plus, Archive } from "lucide-react";
 import { format } from "date-fns";
 
 interface PoojaRequest {
@@ -88,6 +89,59 @@ export default function ClientPoojaRequests() {
     }
   };
 
+  const activeRequests = requests.filter(r => ['open', 'matched'].includes(r.status));
+  const pastRequests = requests.filter(r => r.status === 'closed');
+
+  const RequestCard = ({ request }: { request: PoojaRequest }) => (
+    <Link key={request.id} to={`/request/${request.id}`}>
+      <Card className="hover:shadow-lg transition-all cursor-pointer hover:border-primary/30">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-semibold text-lg">
+                  {request.service_name || request.custom_service_text || 'Pooja Request'}
+                </h3>
+                <Badge variant={getStatusVariant(request.status)}>
+                  {request.status === 'matched' ? 'Booked' : request.status}
+                </Badge>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {request.city}{request.area && `, ${request.area}`}
+                </span>
+                {request.requested_date && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {format(new Date(request.requested_date), 'MMM d, yyyy')}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  {request.response_count} {request.response_count === 1 ? 'response' : 'responses'}
+                </span>
+              </div>
+            </div>
+
+            {request.response_count > 0 && request.status === 'open' && (
+              <div className="ml-4">
+                <Badge variant="destructive" className="bg-primary">
+                  {request.response_count} New
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-3">
+            Posted {format(new Date(request.created_at), 'MMM d, yyyy')}
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+
   if (sessionLoading || loading) {
     return (
       <Layout>
@@ -128,57 +182,45 @@ export default function ClientPoojaRequests() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {requests.map((request) => (
-              <Link key={request.id} to={`/request/${request.id}`}>
-                <Card className="hover:shadow-lg transition-all cursor-pointer hover:border-primary/30">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">
-                            {request.service_name || request.custom_service_text || 'Pooja Request'}
-                          </h3>
-                          <Badge variant={getStatusVariant(request.status)}>
-                            {request.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {request.city}{request.area && `, ${request.area}`}
-                          </span>
-                          {request.requested_date && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {format(new Date(request.requested_date), 'MMM d, yyyy')}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="h-4 w-4" />
-                            {request.response_count} {request.response_count === 1 ? 'response' : 'responses'}
-                          </span>
-                        </div>
-                      </div>
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active">
+                Active ({activeRequests.length})
+              </TabsTrigger>
+              <TabsTrigger value="past" className="flex items-center gap-1">
+                <Archive className="h-4 w-4" />
+                Past ({pastRequests.length})
+              </TabsTrigger>
+            </TabsList>
 
-                      {request.response_count > 0 && request.status === 'open' && (
-                        <div className="ml-4">
-                          <Badge variant="destructive" className="bg-primary">
-                            {request.response_count} New
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Posted {format(new Date(request.created_at), 'MMM d, yyyy')}
-                    </p>
+            <TabsContent value="active">
+              {activeRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    No active requests. Create a new one to get quotes from purohits.
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
-          </div>
+              ) : (
+                <div className="space-y-4">
+                  {activeRequests.map((request) => <RequestCard key={request.id} request={request} />)}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="past">
+              {pastRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    No completed requests yet.
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {pastRequests.map((request) => <RequestCard key={request.id} request={request} />)}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </Layout>
