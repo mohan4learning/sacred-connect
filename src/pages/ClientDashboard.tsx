@@ -124,14 +124,14 @@ export default function ClientDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-4 rounded-lg bg-muted/50">
+              <Link to="/bookings" className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
                 <div className="text-2xl font-bold text-primary">{stats.bookings}</div>
                 <div className="text-sm text-muted-foreground">Bookings</div>
-              </div>
-              <div className="p-4 rounded-lg bg-muted/50">
+              </Link>
+              <Link to="/client/requests" className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
                 <div className="text-2xl font-bold text-primary">{stats.requests}</div>
                 <div className="text-sm text-muted-foreground">Requests</div>
-              </div>
+              </Link>
             </div>
           </CardContent>
         </Card>
