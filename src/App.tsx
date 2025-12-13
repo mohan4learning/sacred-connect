@@ -14,6 +14,7 @@ import BookingDetail from "./pages/BookingDetail";
 import Consultations from "./pages/Consultations";
 import ConsultationDetail from "./pages/ConsultationDetail";
 import RequestPooja from "./pages/RequestPooja";
+import PoojaRequestDetail from "./pages/PoojaRequestDetail";
 import PurohitCalendar from "./pages/PurohitCalendar";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/consultations" element={<Consultations />} />
           <Route path="/consultations/:id" element={<ConsultationDetail />} />
           <Route path="/request" element={<RequestPooja />} />
+          <Route path="/pooja-requests/:id" element={<PoojaRequestDetail />} />
           <Route path="/help" element={<Help />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

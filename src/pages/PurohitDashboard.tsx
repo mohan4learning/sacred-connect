@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
-import { Edit, MessageSquare, Calendar, Clock, MapPin, Video, Users } from "lucide-react";
+import { Edit, MessageSquare, Calendar, Clock, MapPin, Video, Users, Sparkles, IndianRupee } from "lucide-react";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface PurohitData {
   id: string;
@@ -31,17 +32,33 @@ interface UpcomingBooking {
   mode: string;
 }
 
+interface PoojaRequest {
+  id: string;
+  service_name: string | null;
+  custom_service_text: string | null;
+  client_name: string;
+  city: string;
+  area: string | null;
+  mode: string;
+  requested_date: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  created_at: string;
+}
+
 export default function PurohitDashboard() {
   const { session, loading: sessionLoading, isPurohit } = useSession();
   const navigate = useNavigate();
   const [purohit, setPurohit] = useState<PurohitData | null>(null);
   const [upcomingBookings, setUpcomingBookings] = useState<UpcomingBooking[]>([]);
+  const [openRequests, setOpenRequests] = useState<PoojaRequest[]>([]);
   const [stats, setStats] = useState({ 
     totalBookings: 0, 
     pendingBookings: 0, 
     consultations: 0,
     portfolioItems: 0,
-    services: 0 
+    services: 0,
+    openRequests: 0
   });
   const [portfolioCompletion, setPortfolioCompletion] = useState(0);
 
@@ -54,10 +71,16 @@ export default function PurohitDashboard() {
   useEffect(() => {
     if (session?.profileId) {
       fetchPurohitData();
-      fetchStats();
-      fetchUpcomingBookings();
     }
   }, [session?.profileId]);
+
+  useEffect(() => {
+    if (session?.profileId && purohit) {
+      fetchStats();
+      fetchUpcomingBookings();
+      fetchOpenRequests();
+    }
+  }, [session?.profileId, purohit?.city]);
 
   const fetchPurohitData = async () => {
     const { data } = await supabase
@@ -89,13 +112,15 @@ export default function PurohitDashboard() {
       pendingBookingsRes, 
       consultationsRes, 
       portfolioRes,
-      servicesRes
+      servicesRes,
+      openRequestsRes
     ] = await Promise.all([
       supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
       supabase.from('bookings').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId).eq('status', 'pending'),
       supabase.from('consultations').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId).eq('status', 'requested'),
       supabase.from('purohit_portfolio_items').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
       supabase.from('purohit_services').select('id', { count: 'exact' }).eq('purohit_id', session!.profileId),
+      supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('status', 'open'),
     ]);
 
     setStats({
@@ -104,7 +129,41 @@ export default function PurohitDashboard() {
       consultations: consultationsRes.count || 0,
       portfolioItems: portfolioRes.count || 0,
       services: servicesRes.count || 0,
+      openRequests: openRequestsRes.count || 0,
     });
+  };
+
+  const fetchOpenRequests = async () => {
+    if (!purohit) return;
+    
+    // Fetch open requests matching purohit's city
+    const { data } = await supabase
+      .from('pooja_requests')
+      .select(`
+        id, mode, requested_date, budget_min, budget_max, city, area, created_at, custom_service_text,
+        clients (full_name),
+        pooja_services (name)
+      `)
+      .eq('status', 'open')
+      .eq('city', purohit.city)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (data) {
+      setOpenRequests(data.map((r: any) => ({
+        id: r.id,
+        service_name: r.pooja_services?.name || null,
+        custom_service_text: r.custom_service_text,
+        client_name: r.clients?.full_name || 'Unknown',
+        city: r.city,
+        area: r.area,
+        mode: r.mode,
+        requested_date: r.requested_date,
+        budget_min: r.budget_min,
+        budget_max: r.budget_max,
+        created_at: r.created_at,
+      })));
+    }
   };
 
   const fetchUpcomingBookings = async () => {
@@ -192,7 +251,7 @@ export default function PurohitDashboard() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold text-primary">{stats.totalBookings}</div>
                 <div className="text-sm text-muted-foreground">Total Bookings</div>
@@ -204,6 +263,10 @@ export default function PurohitDashboard() {
               <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
                 <div className="text-2xl font-bold text-violet-600">{stats.consultations}</div>
                 <div className="text-sm text-violet-600">Consultation Requests</div>
+              </div>
+              <div className="p-4 rounded-lg bg-saffron-50 border border-saffron-200">
+                <div className="text-2xl font-bold text-saffron-600">{stats.openRequests}</div>
+                <div className="text-sm text-saffron-600">Open Gigs</div>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold text-primary">{stats.services}</div>
@@ -246,6 +309,75 @@ export default function PurohitDashboard() {
             </Link>
           </Button>
         </div>
+
+        {/* Open Pooja Requests (Gigs) */}
+        <Card className="mb-8">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-saffron-500" />
+                Open Pooja Requests
+              </CardTitle>
+              <CardDescription>Clients looking for purohits in your area</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {openRequests.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No open requests in your area right now. Check back later!
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {openRequests.map((request) => (
+                  <Link
+                    key={request.id}
+                    to={`/pooja-requests/${request.id}`}
+                    className="block p-4 rounded-lg border hover:bg-muted/50 transition-colors hover:border-saffron-300"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium">
+                            {request.service_name || request.custom_service_text || 'Pooja Service'}
+                          </p>
+                          <Badge variant={request.mode === 'remote' ? 'secondary' : 'outline'} className="text-xs">
+                            {request.mode === 'remote' ? 'Remote' : request.mode === 'in_person' ? 'In-Person' : 'Both'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          by {request.client_name} • {request.city}{request.area && `, ${request.area}`}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-sm">
+                          {request.requested_date && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(request.requested_date), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                          {(request.budget_min || request.budget_max) && (
+                            <span className="flex items-center gap-1 text-emerald-600">
+                              <IndianRupee className="h-3 w-3" />
+                              {request.budget_min && request.budget_max
+                                ? `${request.budget_min.toLocaleString()} - ${request.budget_max.toLocaleString()}`
+                                : request.budget_min
+                                ? `From ${request.budget_min.toLocaleString()}`
+                                : `Up to ${request.budget_max?.toLocaleString()}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(request.created_at), 'MMM d')}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Upcoming Bookings */}
         <Card>
