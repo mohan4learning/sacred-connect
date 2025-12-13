@@ -19,10 +19,13 @@ export function Header() {
     navigate('/');
   };
 
+  // Determine home link based on role
+  const homeLink = isPurohit ? "/purohit" : isClient ? "/client" : "/";
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to={homeLink} className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full gradient-hero flex items-center justify-center">
             <span className="text-primary-foreground font-display text-sm font-bold">प</span>
           </div>
@@ -32,15 +35,47 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
-          {!isPurohit && (
-            <Link to="/purohits" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Find Purohits
-            </Link>
+          {/* Client-only links */}
+          {isClient && (
+            <>
+              <Link to="/purohits" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Find Purohits
+              </Link>
+              <Link to="/request" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Request Pooja
+              </Link>
+              <Link to="/client/requests" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                My Requests
+              </Link>
+            </>
           )}
-          {!isPurohit && (
-            <Link to="/request" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Request Pooja
-            </Link>
+          {/* Purohit-only links */}
+          {isPurohit && (
+            <>
+              <Link to="/purohit" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
+              <Link to="/purohit/calendar" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Calendar
+              </Link>
+              <Link to="/purohit/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Services
+              </Link>
+              <Link to="/purohit/locations" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Locations
+              </Link>
+            </>
+          )}
+          {/* Public links when not logged in */}
+          {!session && (
+            <>
+              <Link to="/purohits" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Find Purohits
+              </Link>
+              <Link to="/request" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Request Pooja
+              </Link>
+            </>
           )}
           <Link to="/help" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Help

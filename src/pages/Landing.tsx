@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { SearchAutocomplete } from "@/components/SearchAutocomplete";
+import { useSession } from "@/hooks/useSession";
 import { MapPin, Video, Home, Building2, Star, Users, Calendar, Shield } from "lucide-react";
+
 const quickFilters = [
   { label: "Remote Pooja", icon: Video, color: "bg-violet-100 text-violet-700" },
   { label: "At Home", icon: Home, color: "bg-emerald-100 text-emerald-700" },
@@ -37,6 +39,18 @@ const features = [
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const { session, loading, isClient, isPurohit } = useSession();
+
+  // Redirect logged-in users to their respective dashboards
+  useEffect(() => {
+    if (!loading && session) {
+      if (isPurohit) {
+        navigate('/purohit', { replace: true });
+      } else if (isClient) {
+        navigate('/client', { replace: true });
+      }
+    }
+  }, [loading, session, isPurohit, isClient, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +60,17 @@ export default function Landing() {
       navigate('/purohits');
     }
   };
+
+  // Show loading while checking session
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-20 text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
