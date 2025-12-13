@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +42,7 @@ interface PortfolioItem {
 export default function PurohitProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { session, isClient } = useSession();
+  const { clientRecord, isClient, user } = useAuth();
   
   const [purohit, setPurohit] = useState<PurohitDetail | null>(null);
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -103,9 +103,9 @@ export default function PurohitProfile() {
   };
 
   const handleStartConsultation = () => {
-    if (!session || !isClient) {
+    if (!user || !isClient) {
       toast.error('Please login as a client first');
-      navigate('/start?role=client');
+      navigate('/auth');
       return;
     }
     setDialogType('consultation');
@@ -113,9 +113,9 @@ export default function PurohitProfile() {
   };
 
   const handleRequestBooking = () => {
-    if (!session || !isClient) {
+    if (!user || !isClient) {
       toast.error('Please login as a client first');
-      navigate('/start?role=client');
+      navigate('/auth');
       return;
     }
     setDialogType('booking');
@@ -123,13 +123,13 @@ export default function PurohitProfile() {
   };
 
   const handleSubmit = async () => {
-    if (!session || !purohit) return;
+    if (!clientRecord || !purohit) return;
     
     setSubmitting(true);
 
     if (dialogType === 'consultation') {
       const { error } = await supabase.from('consultations').insert({
-        client_id: session.profileId,
+        client_id: clientRecord.id,
         purohit_id: purohit.id,
         service_id: selectedService || null,
         mode: selectedMode,
@@ -145,7 +145,7 @@ export default function PurohitProfile() {
       }
     } else {
       const { error } = await supabase.from('bookings').insert({
-        client_id: session.profileId,
+        client_id: clientRecord.id,
         purohit_id: purohit.id,
         service_id: selectedService || null,
         mode: selectedMode,

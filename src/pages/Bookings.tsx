@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,20 +24,22 @@ interface Booking {
 const COMMISSION_RATE = 0.10; // 10% platform commission
 
 export default function Bookings() {
-  const { session, isClient, isPurohit } = useSession();
+  const { clientRecord, purohitRecord, isClient, isPurohit } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
+
   useEffect(() => {
-    if (session?.profileId) fetchBookings();
-  }, [session?.profileId]);
+    if (profileId) fetchBookings();
+  }, [profileId]);
 
   const fetchBookings = async () => {
     const column = isClient ? 'client_id' : 'purohit_id';
     const { data } = await supabase
       .from('bookings')
       .select(`id, status, mode, scheduled_at, city, price_agreed, purohits(full_name), clients(full_name), pooja_services(name)`)
-      .eq(column, session!.profileId)
+      .eq(column, profileId!)
       .order('created_at', { ascending: false });
 
     if (data) {

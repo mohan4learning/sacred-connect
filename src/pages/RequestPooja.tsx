@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ interface Service {
 }
 
 export default function RequestPooja() {
-  const { session, isClient, loading } = useSession();
+  const { clientRecord, isClient, loading } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [requestedDate, setRequestedDate] = useState<Date | undefined>();
@@ -66,10 +66,10 @@ export default function RequestPooja() {
 
   useEffect(() => {
     if (loading) return;
-    if (!session || !isClient) {
-      navigate("/start");
+    if (!clientRecord || !isClient) {
+      navigate("/auth");
     }
-  }, [loading, session, isClient, navigate]);
+  }, [loading, clientRecord, isClient, navigate]);
 
   const fetchServices = async () => {
     const { data } = await supabase.from("pooja_services").select("id, name").order("name");
@@ -87,11 +87,11 @@ export default function RequestPooja() {
   }
 
   const onSubmit = async (data: FormData) => {
-    if (!session?.profileId) return;
+    if (!clientRecord?.id) return;
     setSubmitting(true);
 
     const { error } = await supabase.from("pooja_requests").insert({
-      client_id: session.profileId,
+      client_id: clientRecord.id,
       service_id: data.service_id || null,
       custom_service_text: data.custom_service_text || null,
       mode: data.mode,

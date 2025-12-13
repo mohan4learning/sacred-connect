@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,7 @@ interface PurohitProfile {
 }
 
 export default function PurohitPortfolio() {
-  const { session, loading: sessionLoading, isPurohit } = useSession();
+  const { purohitRecord, loading: authLoading, isPurohit, user } = useAuth();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [profile, setProfile] = useState<PurohitProfile | null>(null);
@@ -46,23 +46,23 @@ export default function PurohitPortfolio() {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!sessionLoading && (!session || !isPurohit)) {
-      navigate('/start');
+    if (!authLoading && (!user || !isPurohit)) {
+      navigate('/auth');
     }
-  }, [session, sessionLoading, isPurohit, navigate]);
+  }, [user, authLoading, isPurohit, navigate]);
 
   useEffect(() => {
-    if (session?.profileId) {
+    if (purohitRecord?.id) {
       fetchPortfolio();
       fetchProfile();
     }
-  }, [session?.profileId]);
+  }, [purohitRecord?.id]);
 
   const fetchProfile = async () => {
     const { data } = await supabase
       .from('purohits')
       .select('id, full_name, avatar_url')
-      .eq('id', session!.profileId)
+      .eq('id', purohitRecord!.id)
       .single();
 
     if (data) setProfile(data);
@@ -72,7 +72,7 @@ export default function PurohitPortfolio() {
     const { data } = await supabase
       .from('purohit_portfolio_items')
       .select('*')
-      .eq('purohit_id', session!.profileId)
+      .eq('purohit_id', purohitRecord!.id)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -99,7 +99,7 @@ export default function PurohitPortfolio() {
 
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${session!.profileId}-${Date.now()}.${fileExt}`;
+      const fileName = `${purohitRecord!.id}-${Date.now()}.${fileExt}`;
       const filePath = `purohits/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -115,7 +115,7 @@ export default function PurohitPortfolio() {
       const { error: updateError } = await supabase
         .from('purohits')
         .update({ avatar_url: publicUrl })
-        .eq('id', session!.profileId);
+        .eq('id', purohitRecord!.id);
 
       if (updateError) throw updateError;
 
@@ -186,7 +186,7 @@ export default function PurohitPortfolio() {
       // Upload image if provided
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${session!.profileId}/${Date.now()}.${fileExt}`;
+        const fileName = `${purohitRecord!.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('portfolio')
@@ -218,7 +218,7 @@ export default function PurohitPortfolio() {
         const { error } = await supabase
           .from('purohit_portfolio_items')
           .insert({
-            purohit_id: session!.profileId,
+            purohit_id: purohitRecord!.id,
             type: itemType,
             title: title.trim(),
             content_text: contentText.trim() || null,
@@ -265,7 +265,7 @@ export default function PurohitPortfolio() {
     }
   };
 
-  if (sessionLoading || loading) {
+  if (authLoading || loading) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">

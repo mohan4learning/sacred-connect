@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ interface PurohitService {
 }
 
 export default function PurohitServices() {
-  const { session, loading: sessionLoading, isPurohit } = useSession();
+  const { purohitRecord, loading: authLoading, isPurohit, user } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<PurohitService[]>([]);
   const [allServices, setAllServices] = useState<PoojaService[]>([]);
@@ -45,17 +45,17 @@ export default function PurohitServices() {
   const [customServiceDescription, setCustomServiceDescription] = useState("");
 
   useEffect(() => {
-    if (!sessionLoading && (!session || !isPurohit)) {
-      navigate('/start');
+    if (!authLoading && (!user || !isPurohit)) {
+      navigate('/auth');
     }
-  }, [session, sessionLoading, isPurohit, navigate]);
+  }, [user, authLoading, isPurohit, navigate]);
 
   useEffect(() => {
-    if (session?.profileId) {
+    if (purohitRecord?.id) {
       fetchServices();
       fetchAllServices();
     }
-  }, [session?.profileId]);
+  }, [purohitRecord?.id]);
 
   const fetchServices = async () => {
     const { data } = await supabase
@@ -64,7 +64,7 @@ export default function PurohitServices() {
         id, service_id, price_min, price_max,
         pooja_services (name)
       `)
-      .eq('purohit_id', session!.profileId);
+      .eq('purohit_id', purohitRecord!.id);
 
     if (data) {
       setServices(data.map((s: any) => ({
@@ -193,7 +193,7 @@ export default function PurohitServices() {
         const { error } = await supabase
           .from('purohit_services')
           .insert({
-            purohit_id: session!.profileId,
+            purohit_id: purohitRecord!.id,
             service_id: serviceIdToUse,
             price_min: priceMin ? parseInt(priceMin) : null,
             price_max: priceMax ? parseInt(priceMax) : null,
@@ -241,7 +241,7 @@ export default function PurohitServices() {
       ? !!selectedServiceId 
       : !!customServiceName.trim();
 
-  if (sessionLoading || loading) {
+  if (authLoading || loading) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,20 +19,22 @@ interface Consultation {
 }
 
 export default function Consultations() {
-  const { session, isClient } = useSession();
+  const { clientRecord, purohitRecord, isClient } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
+
   useEffect(() => {
-    if (session?.profileId) fetchConsultations();
-  }, [session?.profileId]);
+    if (profileId) fetchConsultations();
+  }, [profileId]);
 
   const fetchConsultations = async () => {
     const column = isClient ? 'client_id' : 'purohit_id';
     const { data } = await supabase
       .from('consultations')
       .select(`id, status, created_at, purohits(full_name), clients(full_name), pooja_services(name)`)
-      .eq(column, session!.profileId)
+      .eq(column, profileId!)
       .order('created_at', { ascending: false });
 
     if (data) {
