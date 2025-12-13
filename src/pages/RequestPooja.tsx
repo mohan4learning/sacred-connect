@@ -40,7 +40,7 @@ interface Service {
 }
 
 export default function RequestPooja() {
-  const { session, isClient } = useSession();
+  const { session, isClient, loading } = useSession();
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [requestedDate, setRequestedDate] = useState<Date | undefined>();
@@ -60,12 +60,13 @@ export default function RequestPooja() {
   const mode = watch("mode");
 
   useEffect(() => {
-    if (!isClient) {
+    if (loading) return;
+    if (!session || !isClient) {
       navigate("/start");
       return;
     }
     fetchServices();
-  }, [isClient]);
+  }, [loading, session, isClient]);
 
   const fetchServices = async () => {
     const { data } = await supabase.from("pooja_services").select("id, name").order("name");
