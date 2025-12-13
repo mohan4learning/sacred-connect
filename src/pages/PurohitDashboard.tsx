@@ -332,12 +332,12 @@ export default function PurohitDashboard() {
                   <Link
                     key={request.id}
                     to={`/pooja-requests/${request.id}`}
-                    className="block p-4 rounded-lg border hover:bg-muted/50 transition-colors hover:border-saffron-300"
+                    className="block p-4 rounded-lg border hover:bg-muted/50 transition-colors hover:border-saffron-300 cursor-pointer group"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium">
+                          <p className="font-medium group-hover:text-primary transition-colors">
                             {request.service_name || request.custom_service_text || 'Pooja Service'}
                           </p>
                           <Badge variant={request.mode === 'remote' ? 'secondary' : 'outline'} className="text-xs">
@@ -366,9 +366,12 @@ export default function PurohitDashboard() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="flex flex-col items-end gap-2">
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(request.created_at), 'MMM d')}
+                        </span>
+                        <span className="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                          View & Respond <MessageSquare className="h-3 w-3" />
                         </span>
                       </div>
                     </div>
