@@ -58,13 +58,13 @@ export default function ClientDashboard() {
   };
 
   const fetchStats = async () => {
-    const [bookingsRes, requestsRes] = await Promise.all([
-      supabase.from('bookings').select('id', { count: 'exact' }).eq('client_id', session!.profileId),
-      supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('client_id', session!.profileId),
+    const [activeBookingsRes, requestsRes] = await Promise.all([
+      supabase.from('bookings').select('id', { count: 'exact' }).eq('client_id', session!.profileId).in('status', ['pending', 'confirmed']),
+      supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('client_id', session!.profileId).in('status', ['open', 'matched']),
     ]);
 
     setStats({
-      bookings: bookingsRes.count || 0,
+      bookings: activeBookingsRes.count || 0,
       consultations: 0,
       requests: requestsRes.count || 0,
     });
@@ -79,6 +79,7 @@ export default function ClientDashboard() {
         pooja_services (name)
       `)
       .eq('client_id', session!.profileId)
+      .in('status', ['pending', 'confirmed'])
       .order('created_at', { ascending: false })
       .limit(3);
 
@@ -126,11 +127,11 @@ export default function ClientDashboard() {
             <div className="grid grid-cols-2 gap-4 text-center">
               <Link to="/bookings" className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
                 <div className="text-2xl font-bold text-primary">{stats.bookings}</div>
-                <div className="text-sm text-muted-foreground">Bookings</div>
+                <div className="text-sm text-muted-foreground">Active Bookings</div>
               </Link>
               <Link to="/client/requests" className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
                 <div className="text-2xl font-bold text-primary">{stats.requests}</div>
-                <div className="text-sm text-muted-foreground">Requests</div>
+                <div className="text-sm text-muted-foreground">Active Requests</div>
               </Link>
             </div>
           </CardContent>
@@ -164,12 +165,12 @@ export default function ClientDashboard() {
           </Button>
         </div>
 
-        {/* Recent Bookings */}
+        {/* Active Bookings */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Recent Bookings</CardTitle>
-              <CardDescription>Your latest booking activity</CardDescription>
+              <CardTitle>Active Bookings</CardTitle>
+              <CardDescription>Pending and confirmed bookings</CardDescription>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/bookings">View All →</Link>

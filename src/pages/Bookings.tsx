@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { MapPin, Calendar, Video, Users } from "lucide-react";
+import { MapPin, Calendar, Video, Users, Archive } from "lucide-react";
 import { format } from "date-fns";
 
 interface Booking {
@@ -47,35 +48,68 @@ export default function Bookings() {
     setLoading(false);
   };
 
+  const activeBookings = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
+  const pastBookings = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
+
+  const BookingCard = ({ b }: { b: Booking }) => (
+    <Link key={b.id} to={`/bookings/${b.id}`}>
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {b.mode === 'remote' ? <Video className="h-5 w-5 text-violet-600" /> : <Users className="h-5 w-5 text-emerald-600" />}
+            <div>
+              <p className="font-medium">{b.service_name || 'Pooja'}</p>
+              <p className="text-sm text-muted-foreground">{isClient ? `with ${b.purohit_name}` : `for ${b.client_name}`}</p>
+              {b.city && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{b.city}</p>}
+            </div>
+          </div>
+          <div className="text-right">
+            <StatusBadge status={b.status as any} />
+            {b.scheduled_at && <p className="text-xs text-muted-foreground mt-1"><Calendar className="inline h-3 w-3 mr-1" />{format(new Date(b.scheduled_at), 'MMM d, h:mm a')}</p>}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+
   return (
     <Layout>
       <div className="container py-8">
         <h1 className="font-display text-3xl font-bold mb-6">My Bookings</h1>
-        {loading ? <p className="text-muted-foreground">Loading...</p> : bookings.length === 0 ? (
-          <p className="text-muted-foreground">No bookings yet. <Link to="/purohits" className="text-primary hover:underline">Find a purohit</Link>.</p>
-        ) : (
-          <div className="space-y-4">
-            {bookings.map((b) => (
-              <Link key={b.id} to={`/bookings/${b.id}`}>
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {b.mode === 'remote' ? <Video className="h-5 w-5 text-violet-600" /> : <Users className="h-5 w-5 text-emerald-600" />}
-                      <div>
-                        <p className="font-medium">{b.service_name || 'Pooja'}</p>
-                        <p className="text-sm text-muted-foreground">{isClient ? `with ${b.purohit_name}` : `for ${b.client_name}`}</p>
-                        {b.city && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{b.city}</p>}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <StatusBadge status={b.status as any} />
-                      {b.scheduled_at && <p className="text-xs text-muted-foreground mt-1"><Calendar className="inline h-3 w-3 mr-1" />{format(new Date(b.scheduled_at), 'MMM d, h:mm a')}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+        {loading ? <p className="text-muted-foreground">Loading...</p> : (
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active">
+                Active ({activeBookings.length})
+              </TabsTrigger>
+              <TabsTrigger value="past" className="flex items-center gap-1">
+                <Archive className="h-4 w-4" />
+                Past ({pastBookings.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="active">
+              {activeBookings.length === 0 ? (
+                <p className="text-muted-foreground py-8 text-center">
+                  No active bookings. <Link to="/purohits" className="text-primary hover:underline">Find a purohit</Link> to book.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {activeBookings.map((b) => <BookingCard key={b.id} b={b} />)}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="past">
+              {pastBookings.length === 0 ? (
+                <p className="text-muted-foreground py-8 text-center">No past bookings.</p>
+              ) : (
+                <div className="space-y-4">
+                  {pastBookings.map((b) => <BookingCard key={b.id} b={b} />)}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </Layout>
