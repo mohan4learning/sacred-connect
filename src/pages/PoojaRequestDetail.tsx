@@ -80,11 +80,11 @@ export default function PoojaRequestDetail() {
   }, [session, sessionLoading, navigate]);
 
   useEffect(() => {
-    if (id) {
+    if (id && !sessionLoading && session) {
       fetchRequest();
       fetchResponses();
     }
-  }, [id, session?.profileId]);
+  }, [id, session?.profileId, sessionLoading, isPurohit]);
 
   // Subscribe to realtime message updates
   useEffect(() => {
