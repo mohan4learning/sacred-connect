@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { SearchAutocomplete } from "@/components/SearchAutocomplete";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { MapPin, Video, Home, Building2, Star, Users, Calendar, Shield } from "lucide-react";
 
 const quickFilters = [
@@ -39,18 +39,20 @@ const features = [
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-  const { session, loading, isClient, isPurohit } = useSession();
+  const { user, profile, loading } = useAuth();
 
   // Redirect logged-in users to their respective dashboards
   useEffect(() => {
-    if (!loading && session) {
-      if (isPurohit) {
+    if (!loading && user && profile) {
+      if (profile.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (profile.role === 'purohit') {
         navigate('/purohit', { replace: true });
-      } else if (isClient) {
+      } else if (profile.role === 'client') {
         navigate('/client', { replace: true });
       }
     }
-  }, [loading, session, isPurohit, isClient, navigate]);
+  }, [loading, user, profile, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,10 +93,10 @@ export default function Landing() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90 font-semibold shadow-lg">
-                <Link to="/start?role=client">I'm a Client</Link>
+                <Link to="/auth">I'm a Client</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
-                <Link to="/start?role=purohit">I'm a Purohit</Link>
+                <Link to="/auth">I'm a Purohit</Link>
               </Button>
             </div>
 
