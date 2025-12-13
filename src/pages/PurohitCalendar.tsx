@@ -5,7 +5,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -59,7 +59,7 @@ const statusColors: Record<string, string> = {
 const blockColor = "#6b7280"; // Gray for blocked time
 
 export default function PurohitCalendar() {
-  const { session, isPurohit, loading: sessionLoading } = useSession();
+  const { purohitRecord, isPurohit, loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingEvent[]>([]);
   const [blocks, setBlocks] = useState<BlockEvent[]>([]);
@@ -79,22 +79,24 @@ export default function PurohitCalendar() {
 
   useEffect(() => {
     // Wait for session to load before checking role
-    if (sessionLoading) return;
+    if (authLoading) return;
     
-    if (!session || !isPurohit) {
-      navigate("/start");
+    if (!user || !isPurohit) {
+      navigate("/auth");
       return;
     }
     
-    fetchBookings();
-    fetchBlocks();
-  }, [session?.profileId, isPurohit, sessionLoading]);
+    if (purohitRecord?.id) {
+      fetchBookings();
+      fetchBlocks();
+    }
+  }, [purohitRecord?.id, isPurohit, authLoading, user]);
 
   const fetchBookings = async () => {
     const { data, error } = await supabase
       .from("bookings")
       .select(`*, clients(full_name, phone, email), pooja_services(name)`)
-      .eq("purohit_id", session!.profileId);
+      .eq("purohit_id", purohitRecord!.id);
 
     if (error) {
       toast.error("Failed to load bookings");
@@ -132,7 +134,7 @@ export default function PurohitCalendar() {
     const { data, error } = await supabase
       .from("purohit_availability_blocks")
       .select("*")
-      .eq("purohit_id", session!.profileId);
+      .eq("purohit_id", purohitRecord!.id);
 
     if (error) {
       console.error("Failed to load blocks:", error);
@@ -213,7 +215,7 @@ export default function PurohitCalendar() {
     const { data, error } = await supabase
       .from("purohit_availability_blocks")
       .insert({
-        purohit_id: session!.profileId,
+        purohit_id: purohitRecord!.id,
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
         reason: blockReason || null,
@@ -280,7 +282,7 @@ export default function PurohitCalendar() {
   ];
 
   // Show loading while session is being checked
-  if (sessionLoading) {
+  if (authLoading) {
     return (
       <Layout>
         <div className="container py-8">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ interface ResponseData {
 
 export default function PoojaRequestDetail() {
   const { id } = useParams<{ id: string }>();
-  const { session, loading: sessionLoading, isPurohit, isClient } = useSession();
+  const { clientRecord, purohitRecord, loading: authLoading, isPurohit, isClient, user } = useAuth();
   const navigate = useNavigate();
   const [request, setRequest] = useState<PoojaRequestData | null>(null);
   const [responses, setResponses] = useState<ResponseData[]>([]);
@@ -73,18 +73,20 @@ export default function PoojaRequestDetail() {
   const [bookingNotes, setBookingNotes] = useState("");
   const [creatingBooking, setCreatingBooking] = useState(false);
 
-  useEffect(() => {
-    if (!sessionLoading && !session) {
-      navigate('/start');
-    }
-  }, [session, sessionLoading, navigate]);
+  const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
 
   useEffect(() => {
-    if (id && !sessionLoading && session) {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (id && !authLoading && user && profileId) {
       fetchRequest();
       fetchResponses();
     }
-  }, [id, session?.profileId, sessionLoading, isPurohit]);
+  }, [id, profileId, authLoading, isPurohit]);
 
   // Subscribe to realtime message updates
   useEffect(() => {
@@ -150,7 +152,7 @@ export default function PoojaRequestDetail() {
   };
 
   const fetchResponses = async () => {
-    if (!id) return;
+    if (!id || !profileId) return;
     
     // Build query for consultations linked to this pooja request
     let query = supabase
@@ -164,15 +166,15 @@ export default function PoojaRequestDetail() {
 
     // IMPORTANT: Purohits should only see their own responses, not other purohits' responses
     // Clients (request owners) can see all responses
-    if (isPurohit && session?.profileId) {
-      query = query.eq('purohit_id', session.profileId);
+    if (isPurohit && profileId) {
+      query = query.eq('purohit_id', profileId);
     }
 
     const { data: consultations } = await query;
 
     if (consultations) {
       // Check if current purohit has already responded
-      if (isPurohit && session?.profileId) {
+      if (isPurohit && profileId) {
         setHasResponded(consultations.length > 0);
       }
 
@@ -208,7 +210,7 @@ export default function PoojaRequestDetail() {
   };
 
   const handleSubmitResponse = async () => {
-    if (!session?.profileId || !request) return;
+    if (!profileId || !request) return;
     
     setSubmitting(true);
     try {
@@ -217,7 +219,7 @@ export default function PoojaRequestDetail() {
         .from('consultations')
         .insert({
           client_id: request.client_id,
-          purohit_id: session.profileId,
+          purohit_id: profileId,
           pooja_request_id: request.id,
           mode: request.mode as any,
           status: 'requested',
@@ -238,7 +240,7 @@ export default function PoojaRequestDetail() {
           .from('consultation_messages')
           .insert({
             consultation_id: consultation.id,
-            sender_id: session.profileId,
+            sender_id: profileId,
             sender_role: 'purohit',
             message_text: messageText,
           });
@@ -297,7 +299,7 @@ export default function PoojaRequestDetail() {
   };
 
   const handleCreateBooking = async () => {
-    if (!selectedResponse || !request || !session?.profileId) return;
+    if (!selectedResponse || !request || !profileId) return;
     
     setCreatingBooking(true);
     try {
@@ -347,7 +349,7 @@ export default function PoojaRequestDetail() {
     }
   };
 
-  if (sessionLoading || loading) {
+  if (authLoading || loading) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">
@@ -361,7 +363,7 @@ export default function PoojaRequestDetail() {
     return null;
   }
 
-  const isOwner = isClient && request.client_id === session?.profileId;
+  const isOwner = isClient && request.client_id === clientRecord?.id;
 
   return (
     <Layout>
@@ -496,7 +498,7 @@ export default function PoojaRequestDetail() {
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{response.purohit_name}</span>
-                        {isPurohit && response.purohit_id === session?.profileId && (
+                      {isPurohit && response.purohit_id === profileId && (
                           <Badge variant="outline" className="text-xs">You</Badge>
                         )}
                       </div>
@@ -516,7 +518,7 @@ export default function PoojaRequestDetail() {
                           ? msg.message_text.replace(/Quote: ₹[\d,]+\n*/, '').trim()
                           : msg.message_text;
                         const senderLabel = msg.sender_role === 'purohit' ? response.purohit_name : request.client_name;
-                        const isOwnMessage = msg.sender_id === session?.profileId;
+                        const isOwnMessage = msg.sender_id === profileId;
 
                         return (
                           <div key={msg.id} className="space-y-1">

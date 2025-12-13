@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,22 +24,22 @@ interface PoojaRequest {
 }
 
 export default function ClientPoojaRequests() {
-  const { session, loading: sessionLoading, isClient } = useSession();
+  const { clientRecord, loading: authLoading, isClient, user } = useAuth();
   const navigate = useNavigate();
   const [requests, setRequests] = useState<PoojaRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!sessionLoading && (!session || !isClient)) {
-      navigate('/start');
+    if (!authLoading && (!user || !isClient)) {
+      navigate('/auth');
     }
-  }, [session, sessionLoading, isClient, navigate]);
+  }, [user, authLoading, isClient, navigate]);
 
   useEffect(() => {
-    if (session?.profileId) {
+    if (clientRecord?.id) {
       fetchRequests();
     }
-  }, [session?.profileId]);
+  }, [clientRecord?.id]);
 
   const fetchRequests = async () => {
     const { data } = await supabase
@@ -48,7 +48,7 @@ export default function ClientPoojaRequests() {
         id, mode, requested_date, city, area, status, created_at, custom_service_text,
         pooja_services (name)
       `)
-      .eq('client_id', session!.profileId)
+      .eq('client_id', clientRecord!.id)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -142,7 +142,7 @@ export default function ClientPoojaRequests() {
     </Link>
   );
 
-  if (sessionLoading || loading) {
+  if (authLoading || loading) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">

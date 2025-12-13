@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { ArrowLeft, MapPin, Plus, X, Save } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PurohitLocations() {
-  const { session, loading: sessionLoading, isPurohit } = useSession();
+  const { purohitRecord, loading: authLoading, isPurohit, user } = useAuth();
   const navigate = useNavigate();
   const [serviceableCities, setServiceableCities] = useState<string[]>([]);
   const [newCity, setNewCity] = useState("");
@@ -20,23 +20,23 @@ export default function PurohitLocations() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!sessionLoading && (!session || !isPurohit)) {
-      navigate('/start');
+    if (!authLoading && (!user || !isPurohit)) {
+      navigate('/auth');
     }
-  }, [session, sessionLoading, isPurohit, navigate]);
+  }, [user, authLoading, isPurohit, navigate]);
 
   useEffect(() => {
-    if (session?.profileId) {
+    if (purohitRecord?.id) {
       fetchLocations();
     }
-  }, [session?.profileId]);
+  }, [purohitRecord?.id]);
 
   const fetchLocations = async () => {
     setLoading(true);
     const { data } = await supabase
       .from('purohits')
       .select('serviceable_cities, city')
-      .eq('id', session!.profileId)
+      .eq('id', purohitRecord!.id)
       .single();
     
     if (data) {
@@ -80,7 +80,7 @@ export default function PurohitLocations() {
       const { error } = await supabase
         .from('purohits')
         .update({ serviceable_cities: serviceableCities })
-        .eq('id', session!.profileId);
+        .eq('id', purohitRecord!.id);
 
       if (error) throw error;
       toast.success("Service areas updated successfully!");
@@ -92,7 +92,7 @@ export default function PurohitLocations() {
     }
   };
 
-  if (sessionLoading || loading) {
+  if (authLoading || loading) {
     return (
       <Layout>
         <div className="container py-12 flex items-center justify-center">

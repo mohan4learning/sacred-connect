@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ interface ConsultationData {
 
 export default function ConsultationDetail() {
   const { id } = useParams<{ id: string }>();
-  const { session, isClient, isPurohit } = useSession();
+  const { clientRecord, purohitRecord, isClient, isPurohit, profile } = useAuth();
   const navigate = useNavigate();
   const [consultation, setConsultation] = useState<ConsultationData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -85,9 +85,10 @@ export default function ConsultationDetail() {
 
     // SECURITY: Verify user has access to this consultation
     // Only the client or the purohit involved can view it
+    const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
     const isParticipant = 
-      (isClient && data.client_id === session?.profileId) ||
-      (isPurohit && data.purohit_id === session?.profileId);
+      (isClient && data.client_id === profileId) ||
+      (isPurohit && data.purohit_id === profileId);
 
     if (!isParticipant) {
       toast.error("You don't have access to this consultation");
@@ -137,13 +138,15 @@ export default function ConsultationDetail() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !session?.profileId) return;
+    const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
+    const senderRole = isClient ? 'client' : 'purohit';
+    if (!newMessage.trim() || !profileId) return;
     setSending(true);
 
     const { error } = await supabase.from("consultation_messages").insert({
-      consultation_id: id,
-      sender_role: session.role,
-      sender_id: session.profileId,
+      consultation_id: id!,
+      sender_role: senderRole,
+      sender_id: profileId,
       message_text: newMessage.trim(),
     });
 
@@ -157,13 +160,15 @@ export default function ConsultationDetail() {
   };
 
   const handleUpdateQuote = async () => {
-    if (!quoteAmount || !session?.profileId) return;
+    const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
+    const senderRole = isClient ? 'client' : 'purohit';
+    if (!quoteAmount || !profileId) return;
     setUpdatingQuote(true);
 
     const { error } = await supabase.from("consultation_messages").insert({
-      consultation_id: id,
-      sender_role: session.role,
-      sender_id: session.profileId,
+      consultation_id: id!,
+      sender_role: senderRole,
+      sender_id: profileId,
       message_text: `Quote: ₹${parseInt(quoteAmount).toLocaleString()}`,
     });
 
@@ -297,7 +302,8 @@ export default function ConsultationDetail() {
                 </p>
               ) : (
                 messages.map((msg) => {
-                  const isOwnMessage = msg.sender_id === session?.profileId;
+                  const profileId = isClient ? clientRecord?.id : purohitRecord?.id;
+                  const isOwnMessage = msg.sender_id === profileId;
                   return (
                     <div
                       key={msg.id}

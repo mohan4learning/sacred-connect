@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ interface Review {
 
 export default function BookingDetail() {
   const { id } = useParams<{ id: string }>();
-  const { session, isClient, isPurohit } = useSession();
+  const { clientRecord, purohitRecord, isClient, isPurohit } = useAuth();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -338,7 +338,7 @@ export default function BookingDetail() {
           open={reviewDialogOpen}
           onOpenChange={setReviewDialogOpen}
           bookingId={booking.id}
-          reviewerId={session!.profileId}
+          reviewerId={(isClient ? clientRecord?.id : purohitRecord?.id) || ""}
           reviewerRole={isClient ? "client" : "purohit"}
           recipientName={otherParty.full_name}
           onReviewSubmitted={fetchReviews}
