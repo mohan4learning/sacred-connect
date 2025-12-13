@@ -1,17 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
-import { SearchAutocomplete } from "@/components/SearchAutocomplete";
 import { useAuth } from "@/contexts/AuthContext";
-import { MapPin, Video, Home, Building2, Star, Users, Calendar, Shield } from "lucide-react";
-
-const quickFilters = [
-  { label: "Remote Pooja", icon: Video, color: "bg-violet-100 text-violet-700" },
-  { label: "At Home", icon: Home, color: "bg-emerald-100 text-emerald-700" },
-  { label: "Temple", icon: Building2, color: "bg-amber-100 text-amber-700" },
-  { label: "By City", icon: MapPin, color: "bg-blue-100 text-blue-700" },
-];
+import { Video, Users, Calendar, Shield } from "lucide-react";
 
 const features = [
   {
@@ -37,7 +29,6 @@ const features = [
 ];
 
 export default function Landing() {
-  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { user, profile, loading } = useAuth();
 
@@ -53,15 +44,6 @@ export default function Landing() {
       }
     }
   }, [loading, user, profile, navigate]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/purohits?search=${encodeURIComponent(searchQuery)}`);
-    } else {
-      navigate('/purohits');
-    }
-  };
 
   // Show loading while checking session
   if (loading) {
@@ -99,41 +81,7 @@ export default function Landing() {
                 <Link to="/auth">I'm a Purohit</Link>
               </Button>
             </div>
-
-            {/* Search Bar */}
-            <div className="max-w-xl mx-auto relative">
-              <SearchAutocomplete
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={() => handleSearch({ preventDefault: () => {} } as React.FormEvent)}
-                placeholder="Search pooja or purohit..."
-                inputClassName="pr-24 h-14 text-lg bg-background text-foreground rounded-full shadow-lg border-0"
-              />
-              <Button 
-                onClick={() => handleSearch({ preventDefault: () => {} } as React.FormEvent)} 
-                size="sm" 
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full btn-hero z-10"
-              >
-                Search
-              </Button>
-            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Quick Filters */}
-      <section className="container py-8 -mt-6 relative z-10">
-        <div className="flex flex-wrap justify-center gap-3">
-          {quickFilters.map((filter) => (
-            <Link
-              key={filter.label}
-              to={`/purohits?filter=${encodeURIComponent(filter.label.toLowerCase())}`}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-full ${filter.color} font-medium text-sm hover:opacity-80 transition-opacity shadow-sm`}
-            >
-              <filter.icon className="h-4 w-4" />
-              {filter.label}
-            </Link>
-          ))}
         </div>
       </section>
 
@@ -172,10 +120,7 @@ export default function Landing() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="btn-hero">
-              <Link to="/purohits">Browse Purohits</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="btn-outline-hero">
-              <Link to="/request">Request a Pooja</Link>
+              <Link to="/auth">Sign In to Get Started</Link>
             </Button>
           </div>
         </div>
