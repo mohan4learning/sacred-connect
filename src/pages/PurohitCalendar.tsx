@@ -59,7 +59,7 @@ const statusColors: Record<string, string> = {
 const blockColor = "#6b7280"; // Gray for blocked time
 
 export default function PurohitCalendar() {
-  const { session, isPurohit } = useSession();
+  const { session, isPurohit, loading: sessionLoading } = useSession();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingEvent[]>([]);
   const [blocks, setBlocks] = useState<BlockEvent[]>([]);
@@ -78,15 +78,17 @@ export default function PurohitCalendar() {
   const [savingBlock, setSavingBlock] = useState(false);
 
   useEffect(() => {
-    if (!isPurohit) {
+    // Wait for session to load before checking role
+    if (sessionLoading) return;
+    
+    if (!session || !isPurohit) {
       navigate("/start");
       return;
     }
-    if (session?.profileId) {
-      fetchBookings();
-      fetchBlocks();
-    }
-  }, [session?.profileId, isPurohit]);
+    
+    fetchBookings();
+    fetchBlocks();
+  }, [session?.profileId, isPurohit, sessionLoading]);
 
   const fetchBookings = async () => {
     const { data, error } = await supabase
@@ -276,6 +278,17 @@ export default function PurohitCalendar() {
       borderColor: blockColor,
     })),
   ];
+
+  // Show loading while session is being checked
+  if (sessionLoading) {
+    return (
+      <Layout>
+        <div className="container py-8">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
