@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Star, Video, Users, Clock, Languages, Award, MessageSquare, Calendar, ArrowLeft } from "lucide-react";
+import { MapPin, Star, Video, Users, Clock, Languages, Award, MessageSquare, Calendar, ArrowLeft, Home, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface PurohitDetail {
@@ -21,6 +21,8 @@ interface PurohitDetail {
   bio: string | null;
   remote_pooja_available: boolean;
   in_person_available: boolean;
+  temple_pooja_available: boolean;
+  video_call_available: boolean;
   avatar_url: string | null;
 }
 
@@ -68,7 +70,7 @@ export default function PurohitProfile() {
     setLoading(true);
 
     const [purohitRes, servicesRes, portfolioRes, bookingsRes] = await Promise.all([
-      supabase.from('purohits').select('id, full_name, city, area, bio, languages, experience_years, remote_pooja_available, in_person_available, avatar_url, is_verified, user_id').eq('id', id).single(),
+      supabase.from('purohits').select('id, full_name, city, area, bio, languages, experience_years, remote_pooja_available, in_person_available, temple_pooja_available, video_call_available, avatar_url, is_verified, user_id').eq('id', id).single(),
       supabase.from('purohit_services').select(`
         id,
         price_min,
@@ -228,14 +230,24 @@ export default function PurohitProfile() {
                 </p>
 
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {purohit.remote_pooja_available && (
-                    <span className="inline-flex items-center gap-1 text-sm bg-violet-100 text-violet-700 px-3 py-1 rounded-full">
-                      <Video className="h-4 w-4" /> Remote Available
-                    </span>
-                  )}
                   {purohit.in_person_available && (
                     <span className="inline-flex items-center gap-1 text-sm bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">
-                      <Users className="h-4 w-4" /> In-Person
+                      <Home className="h-4 w-4" /> In-Person
+                    </span>
+                  )}
+                  {purohit.remote_pooja_available && (
+                    <span className="inline-flex items-center gap-1 text-sm bg-violet-100 text-violet-700 px-3 py-1 rounded-full">
+                      <Users className="h-4 w-4" /> Remote
+                    </span>
+                  )}
+                  {purohit.temple_pooja_available && (
+                    <span className="inline-flex items-center gap-1 text-sm bg-amber-100 text-amber-700 px-3 py-1 rounded-full">
+                      <Building2 className="h-4 w-4" /> Temple
+                    </span>
+                  )}
+                  {purohit.video_call_available && (
+                    <span className="inline-flex items-center gap-1 text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                      <Video className="h-4 w-4" /> Video Call
                     </span>
                   )}
                 </div>
