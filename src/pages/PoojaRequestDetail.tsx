@@ -14,6 +14,7 @@ import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, 
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { QuoteComparison } from "@/components/QuoteComparison";
 import { cn } from "@/lib/utils";
 
 interface PoojaRequestData {
@@ -461,13 +462,26 @@ export default function PoojaRequestDetail() {
         {/* Responses Section */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Responses ({responses.length})
-            </CardTitle>
-            <CardDescription>
-              {isOwner ? "Quotes and messages from purohits" : "Response history for this request"}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Responses ({responses.length})
+                </CardTitle>
+                <CardDescription>
+                  {isOwner ? "Quotes and messages from purohits" : "Response history for this request"}
+                </CardDescription>
+              </div>
+              {/* Quote Comparison Button - Only for clients with multiple responses */}
+              {isOwner && responses.length >= 2 && (
+                <QuoteComparison 
+                  responses={responses}
+                  requestStatus={request.status}
+                  onAccept={handleAcceptResponse}
+                  onOpenBooking={handleOpenBookingDialog}
+                />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {responses.length === 0 ? (
