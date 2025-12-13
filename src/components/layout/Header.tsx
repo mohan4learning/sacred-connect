@@ -80,17 +80,6 @@ export function Header() {
               Dashboard
             </Link>
           )}
-          {/* Public links when not logged in */}
-          {!user && (
-            <>
-              <Link to="/purohits" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Find Purohits
-              </Link>
-              <Link to="/request" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Request Pooja
-              </Link>
-            </>
-          )}
           <Link to="/help" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Help
           </Link>
