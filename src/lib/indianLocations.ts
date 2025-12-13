@@ -1,186 +1,383 @@
-// India Location API integration for comprehensive location data
-
-const API_BASE = 'https://india-location-hub.in/api';
-
-// Cache for API responses
-const cache: {
-  states?: { id: number; name: string }[];
-  districts: Record<string, { id: number; name: string; state_id: number }[]>;
-  searchResults: Record<string, { name: string; type: string; parent?: string }[]>;
-} = {
-  districts: {},
-  searchResults: {},
-};
-
-// Fallback data for when API is unavailable
-const fallbackCities = [
-  "Mumbai", "Delhi", "Bangalore", "Pune", "Hyderabad", "Chennai", "Kolkata",
-  "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Kochi", "Varanasi", "Indore",
-  "Nagpur", "Bhopal", "Visakhapatnam", "Coimbatore", "Mysore", "Surat", "Vadodara",
-  "Patna", "Bhubaneswar", "Guwahati", "Ranchi", "Thiruvananthapuram", "Agra",
-  "Kanpur", "Nashik", "Rajkot", "Madurai", "Vijayawada", "Jodhpur", "Raipur",
-  "Goa", "Dehradun", "Shimla", "Amritsar", "Ludhiana", "Jalandhar", "Noida",
-  "Gurgaon", "Faridabad", "Ghaziabad", "Thane", "Navi Mumbai", "Howrah"
-];
+// Comprehensive India Location Database
+// All states, union territories, and major cities/districts
 
 export interface LocationResult {
   name: string;
-  type: 'state' | 'district' | 'city' | 'taluka' | 'village';
+  type: 'state' | 'district' | 'city';
   parent?: string;
   fullName?: string;
 }
 
-// Fetch all states
-export const fetchStates = async (): Promise<string[]> => {
-  if (cache.states) {
-    return cache.states.map(s => s.name);
-  }
-  
-  try {
-    const response = await fetch(`${API_BASE}/locations/states`);
-    if (!response.ok) throw new Error('API unavailable');
-    const data = await response.json();
-    cache.states = data.data || data;
-    return (cache.states || []).map(s => s.name);
-  } catch (error) {
-    console.warn('Using fallback cities due to API error:', error);
-    return fallbackCities;
-  }
+// All Indian States and Union Territories
+export const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+];
+
+// Districts/Cities by State
+export const DISTRICTS_BY_STATE: Record<string, string[]> = {
+  "Andhra Pradesh": [
+    "Anantapur", "Chittoor", "East Godavari", "Guntur", "Krishna", "Kurnool",
+    "Nellore", "Prakasam", "Srikakulam", "Visakhapatnam", "Vizianagaram",
+    "West Godavari", "YSR Kadapa", "Vijayawada", "Tirupati", "Rajahmundry",
+    "Kakinada", "Eluru", "Ongole", "Nandyal", "Machilipatnam", "Tenali"
+  ],
+  "Arunachal Pradesh": [
+    "Anjaw", "Changlang", "Dibang Valley", "East Kameng", "East Siang",
+    "Itanagar", "Kurung Kumey", "Lohit", "Lower Dibang Valley", "Lower Subansiri",
+    "Papum Pare", "Tawang", "Tirap", "Upper Siang", "Upper Subansiri", "West Kameng",
+    "West Siang", "Naharlagun", "Ziro", "Pasighat"
+  ],
+  "Assam": [
+    "Baksa", "Barpeta", "Biswanath", "Bongaigaon", "Cachar", "Charaideo",
+    "Chirang", "Darrang", "Dhemaji", "Dhubri", "Dibrugarh", "Dima Hasao",
+    "Goalpara", "Golaghat", "Guwahati", "Hailakandi", "Hojai", "Jorhat",
+    "Kamrup", "Karbi Anglong", "Karimganj", "Kokrajhar", "Lakhimpur", "Majuli",
+    "Morigaon", "Nagaon", "Nalbari", "Sivasagar", "Sonitpur", "Tezpur",
+    "Silchar", "Tinsukia", "Udalguri", "West Karbi Anglong"
+  ],
+  "Bihar": [
+    "Araria", "Arwal", "Aurangabad", "Banka", "Begusarai", "Bhagalpur",
+    "Bhojpur", "Buxar", "Darbhanga", "East Champaran", "Gaya", "Gopalganj",
+    "Jamui", "Jehanabad", "Kaimur", "Katihar", "Khagaria", "Kishanganj",
+    "Lakhisarai", "Madhepura", "Madhubani", "Munger", "Muzaffarpur", "Nalanda",
+    "Nawada", "Patna", "Purnia", "Rohtas", "Saharsa", "Samastipur", "Saran",
+    "Sheikhpura", "Sheohar", "Sitamarhi", "Siwan", "Supaul", "Vaishali",
+    "West Champaran", "Hajipur", "Sasaram", "Dehri", "Bettiah", "Motihari"
+  ],
+  "Chhattisgarh": [
+    "Balod", "Baloda Bazar", "Balrampur", "Bastar", "Bemetara", "Bijapur",
+    "Bilaspur", "Dantewada", "Dhamtari", "Durg", "Gariaband", "Janjgir-Champa",
+    "Jashpur", "Kabirdham", "Kanker", "Kondagaon", "Korba", "Koriya",
+    "Mahasamund", "Mungeli", "Narayanpur", "Raigarh", "Raipur", "Rajnandgaon",
+    "Sukma", "Surajpur", "Surguja", "Bhilai", "Ambikapur", "Jagdalpur"
+  ],
+  "Goa": [
+    "North Goa", "South Goa", "Panaji", "Margao", "Vasco da Gama", "Mapusa",
+    "Ponda", "Bicholim", "Curchorem", "Canacona", "Quepem", "Sanguem",
+    "Calangute", "Candolim", "Anjuna", "Vagator", "Baga"
+  ],
+  "Gujarat": [
+    "Ahmedabad", "Amreli", "Anand", "Aravalli", "Banaskantha", "Bharuch",
+    "Bhavnagar", "Botad", "Chhota Udaipur", "Dahod", "Dang", "Devbhoomi Dwarka",
+    "Gandhinagar", "Gir Somnath", "Jamnagar", "Junagadh", "Kheda", "Kutch",
+    "Mahisagar", "Mehsana", "Morbi", "Narmada", "Navsari", "Panchmahal",
+    "Patan", "Porbandar", "Rajkot", "Sabarkantha", "Surat", "Surendranagar",
+    "Tapi", "Vadodara", "Valsad", "Bhuj", "Ankleshwar", "Vapi", "Nadiad",
+    "Gandhidham", "Veraval", "Godhra", "Palanpur", "Bharuch"
+  ],
+  "Haryana": [
+    "Ambala", "Bhiwani", "Charkhi Dadri", "Faridabad", "Fatehabad", "Gurugram",
+    "Hisar", "Jhajjar", "Jind", "Kaithal", "Karnal", "Kurukshetra", "Mahendragarh",
+    "Nuh", "Palwal", "Panchkula", "Panipat", "Rewari", "Rohtak", "Sirsa",
+    "Sonipat", "Yamunanagar", "Bahadurgarh", "Thanesar", "Narnaul", "Hansi",
+    "Tosham", "Ladwa"
+  ],
+  "Himachal Pradesh": [
+    "Bilaspur", "Chamba", "Hamirpur", "Kangra", "Kinnaur", "Kullu", "Lahaul and Spiti",
+    "Mandi", "Shimla", "Sirmaur", "Solan", "Una", "Dharamshala", "Manali",
+    "Palampur", "Nahan", "Sundernagar", "Paonta Sahib", "Baddi", "Kasauli",
+    "Dalhousie", "McLeod Ganj", "Keylong"
+  ],
+  "Jharkhand": [
+    "Bokaro", "Chatra", "Deoghar", "Dhanbad", "Dumka", "East Singhbhum",
+    "Garhwa", "Giridih", "Godda", "Gumla", "Hazaribagh", "Jamtara", "Jamshedpur",
+    "Khunti", "Koderma", "Latehar", "Lohardaga", "Pakur", "Palamu", "Ramgarh",
+    "Ranchi", "Sahebganj", "Seraikela Kharsawan", "Simdega", "West Singhbhum",
+    "Chaibasa", "Medininagar"
+  ],
+  "Karnataka": [
+    "Bagalkot", "Ballari", "Belagavi", "Bengaluru Rural", "Bengaluru Urban",
+    "Bidar", "Chamarajanagar", "Chikkaballapur", "Chikkamagaluru", "Chitradurga",
+    "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag", "Hassan", "Haveri",
+    "Kalaburagi", "Kodagu", "Kolar", "Koppal", "Mandya", "Mysuru", "Raichur",
+    "Ramanagara", "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada", "Vijayapura",
+    "Yadgir", "Mangaluru", "Hubli", "Belgaum", "Gulbarga"
+  ],
+  "Kerala": [
+    "Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam",
+    "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta",
+    "Thiruvananthapuram", "Thrissur", "Wayanad", "Kochi", "Calicut",
+    "Trivandrum", "Munnar", "Thekkady", "Alleppey", "Kumarakom", "Guruvayur",
+    "Kovalam", "Varkala", "Bekal", "Fort Kochi"
+  ],
+  "Madhya Pradesh": [
+    "Agar Malwa", "Alirajpur", "Anuppur", "Ashoknagar", "Balaghat", "Barwani",
+    "Betul", "Bhind", "Bhopal", "Burhanpur", "Chhatarpur", "Chhindwara",
+    "Damoh", "Datia", "Dewas", "Dhar", "Dindori", "Guna", "Gwalior", "Harda",
+    "Hoshangabad", "Indore", "Jabalpur", "Jhabua", "Katni", "Khandwa", "Khargone",
+    "Mandla", "Mandsaur", "Morena", "Narsinghpur", "Neemuch", "Panna", "Raisen",
+    "Rajgarh", "Ratlam", "Rewa", "Sagar", "Satna", "Sehore", "Seoni", "Shahdol",
+    "Shajapur", "Sheopur", "Shivpuri", "Sidhi", "Singrauli", "Tikamgarh",
+    "Ujjain", "Umaria", "Vidisha", "Orchha", "Khajuraho", "Sanchi", "Pachmarhi"
+  ],
+  "Maharashtra": [
+    "Ahmednagar", "Akola", "Amravati", "Aurangabad", "Beed", "Bhandara",
+    "Buldhana", "Chandrapur", "Dhule", "Gadchiroli", "Gondia", "Hingoli",
+    "Jalgaon", "Jalna", "Kolhapur", "Latur", "Mumbai City", "Mumbai Suburban",
+    "Nagpur", "Nanded", "Nandurbar", "Nashik", "Osmanabad", "Palghar", "Parbhani",
+    "Pune", "Raigad", "Ratnagiri", "Sangli", "Satara", "Sindhudurg", "Solapur",
+    "Thane", "Wardha", "Washim", "Yavatmal", "Navi Mumbai", "Panvel", "Kalyan",
+    "Dombivli", "Vasai", "Virar", "Mira Road", "Bhiwandi", "Ulhasnagar",
+    "Mahabaleshwar", "Lonavala", "Shirdi", "Alibag", "Lavasa"
+  ],
+  "Manipur": [
+    "Bishnupur", "Chandel", "Churachandpur", "Imphal East", "Imphal West",
+    "Jiribam", "Kakching", "Kamjong", "Kangpokpi", "Noney", "Pherzawl",
+    "Senapati", "Tamenglong", "Tengnoupal", "Thoubal", "Ukhrul", "Imphal",
+    "Moreh", "Moirang"
+  ],
+  "Meghalaya": [
+    "East Garo Hills", "East Jaintia Hills", "East Khasi Hills", "North Garo Hills",
+    "Ri Bhoi", "South Garo Hills", "South West Garo Hills", "South West Khasi Hills",
+    "West Garo Hills", "West Jaintia Hills", "West Khasi Hills", "Shillong",
+    "Tura", "Jowai", "Nongstoin", "Williamnagar", "Baghmara", "Cherrapunji"
+  ],
+  "Mizoram": [
+    "Aizawl", "Champhai", "Hnahthial", "Khawzawl", "Kolasib", "Lawngtlai",
+    "Lunglei", "Mamit", "Saiha", "Saitual", "Serchhip", "Champhai Town"
+  ],
+  "Nagaland": [
+    "Chümoukedima", "Dimapur", "Kiphire", "Kohima", "Longleng", "Mokokchung",
+    "Mon", "Noklak", "Peren", "Phek", "Tuensang", "Wokha", "Zunheboto"
+  ],
+  "Odisha": [
+    "Angul", "Balangir", "Balasore", "Bargarh", "Bhadrak", "Boudh", "Cuttack",
+    "Deogarh", "Dhenkanal", "Gajapati", "Ganjam", "Jagatsinghpur", "Jajpur",
+    "Jharsuguda", "Kalahandi", "Kandhamal", "Kendrapara", "Kendujhar", "Khordha",
+    "Koraput", "Malkangiri", "Mayurbhanj", "Nabarangpur", "Nayagarh", "Nuapada",
+    "Puri", "Rayagada", "Sambalpur", "Subarnapur", "Sundargarh", "Bhubaneswar",
+    "Rourkela", "Berhampur", "Konark", "Paradip"
+  ],
+  "Punjab": [
+    "Amritsar", "Barnala", "Bathinda", "Faridkot", "Fatehgarh Sahib", "Fazilka",
+    "Ferozepur", "Gurdaspur", "Hoshiarpur", "Jalandhar", "Kapurthala", "Ludhiana",
+    "Malerkotla", "Mansa", "Moga", "Mohali", "Muktsar", "Pathankot", "Patiala",
+    "Rupnagar", "Sangrur", "Shaheed Bhagat Singh Nagar", "Tarn Taran", "Zirakpur",
+    "Phagwara", "Khanna", "Batala", "Abohar", "Rajpura"
+  ],
+  "Rajasthan": [
+    "Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara",
+    "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur",
+    "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu",
+    "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand",
+    "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur",
+    "Mount Abu", "Pushkar", "Ranthambore", "Mandawa", "Bhangarh"
+  ],
+  "Sikkim": [
+    "East Sikkim", "North Sikkim", "South Sikkim", "West Sikkim", "Gangtok",
+    "Namchi", "Pelling", "Lachung", "Ravangla", "Yuksom", "Mangan", "Gyalshing"
+  ],
+  "Tamil Nadu": [
+    "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
+    "Dindigul", "Erode", "Kallakurichi", "Kancheepuram", "Kanyakumari", "Karur",
+    "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal",
+    "Nilgiris", "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem",
+    "Sivaganga", "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli",
+    "Tirunelveli", "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai",
+    "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar", "Ooty", "Kodaikanal",
+    "Mahabalipuram", "Rameswaram", "Pondicherry"
+  ],
+  "Telangana": [
+    "Adilabad", "Bhadradri Kothagudem", "Hyderabad", "Jagtial", "Jangaon",
+    "Jayashankar Bhupalpally", "Jogulamba Gadwal", "Kamareddy", "Karimnagar",
+    "Khammam", "Komaram Bheem", "Mahabubabad", "Mahabubnagar", "Mancherial",
+    "Medak", "Medchal-Malkajgiri", "Mulugu", "Nagarkurnool", "Nalgonda",
+    "Narayanpet", "Nirmal", "Nizamabad", "Peddapalli", "Rajanna Sircilla",
+    "Rangareddy", "Sangareddy", "Siddipet", "Suryapet", "Vikarabad", "Wanaparthy",
+    "Warangal Rural", "Warangal Urban", "Yadadri Bhuvanagiri", "Secunderabad",
+    "Cyberabad", "HITEC City", "Gachibowli", "Banjara Hills", "Jubilee Hills"
+  ],
+  "Tripura": [
+    "Dhalai", "Gomati", "Khowai", "North Tripura", "Sepahijala", "South Tripura",
+    "Unakoti", "West Tripura", "Agartala", "Udaipur", "Dharmanagar", "Kailasahar"
+  ],
+  "Uttar Pradesh": [
+    "Agra", "Aligarh", "Ambedkar Nagar", "Amethi", "Amroha", "Auraiya", "Ayodhya",
+    "Azamgarh", "Baghpat", "Bahraich", "Ballia", "Balrampur", "Banda", "Barabanki",
+    "Bareilly", "Basti", "Bhadohi", "Bijnor", "Budaun", "Bulandshahr", "Chandauli",
+    "Chitrakoot", "Deoria", "Etah", "Etawah", "Farrukhabad", "Fatehpur", "Firozabad",
+    "Gautam Buddha Nagar", "Ghaziabad", "Ghazipur", "Gonda", "Gorakhpur", "Hamirpur",
+    "Hapur", "Hardoi", "Hathras", "Jalaun", "Jaunpur", "Jhansi", "Kannauj",
+    "Kanpur Dehat", "Kanpur Nagar", "Kasganj", "Kaushambi", "Kushinagar", "Lakhimpur Kheri",
+    "Lalitpur", "Lucknow", "Maharajganj", "Mahoba", "Mainpuri", "Mathura", "Mau",
+    "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit", "Pratapgarh",
+    "Prayagraj", "Raebareli", "Rampur", "Saharanpur", "Sambhal", "Sant Kabir Nagar",
+    "Shahjahanpur", "Shamli", "Shravasti", "Siddharthnagar", "Sitapur", "Sonbhadra",
+    "Sultanpur", "Unnao", "Varanasi", "Noida", "Greater Noida", "Gurgaon",
+    "Allahabad", "Vrindavan", "Fatehpur Sikri", "Sarnath"
+  ],
+  "Uttarakhand": [
+    "Almora", "Bageshwar", "Chamoli", "Champawat", "Dehradun", "Haridwar",
+    "Nainital", "Pauri Garhwal", "Pithoragarh", "Rudraprayag", "Tehri Garhwal",
+    "Udham Singh Nagar", "Uttarkashi", "Rishikesh", "Mussoorie", "Roorkee",
+    "Haldwani", "Kashipur", "Rudrapur", "Jim Corbett", "Ranikhet", "Auli",
+    "Badrinath", "Kedarnath", "Gangotri", "Yamunotri", "Valley of Flowers"
+  ],
+  "West Bengal": [
+    "Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur",
+    "Darjeeling", "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong",
+    "Kolkata", "Malda", "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman",
+    "Paschim Medinipur", "Purba Bardhaman", "Purba Medinipur", "Purulia",
+    "South 24 Parganas", "Uttar Dinajpur", "Siliguri", "Durgapur", "Asansol",
+    "Kharagpur", "Haldia", "Santiniketan", "Sundarbans", "Digha", "Shantiniketan"
+  ],
+  "Andaman and Nicobar Islands": [
+    "Nicobar", "North and Middle Andaman", "South Andaman", "Port Blair",
+    "Havelock Island", "Neil Island", "Ross Island", "Cellular Jail"
+  ],
+  "Chandigarh": [
+    "Chandigarh", "Sector 17", "Sector 22", "Sector 35", "Manimajra",
+    "Panchkula", "Mohali", "Zirakpur"
+  ],
+  "Dadra and Nagar Haveli and Daman and Diu": [
+    "Dadra and Nagar Haveli", "Daman", "Diu", "Silvassa", "Moti Daman",
+    "Nani Daman", "Diu Town"
+  ],
+  "Delhi": [
+    "Central Delhi", "East Delhi", "New Delhi", "North Delhi", "North East Delhi",
+    "North West Delhi", "Shahdara", "South Delhi", "South East Delhi", "South West Delhi",
+    "West Delhi", "Connaught Place", "Karol Bagh", "Chandni Chowk", "Lajpat Nagar",
+    "Saket", "Vasant Kunj", "Dwarka", "Rohini", "Pitampura", "Janakpuri",
+    "Rajouri Garden", "Greater Kailash", "Defence Colony", "Hauz Khas",
+    "Nehru Place", "Okhla", "Laxmi Nagar", "Preet Vihar", "Mayur Vihar",
+    "Noida Extension", "Gurgaon", "Faridabad"
+  ],
+  "Jammu and Kashmir": [
+    "Anantnag", "Bandipora", "Baramulla", "Budgam", "Doda", "Ganderbal",
+    "Jammu", "Kathua", "Kishtwar", "Kulgam", "Kupwara", "Poonch", "Pulwama",
+    "Rajouri", "Ramban", "Reasi", "Samba", "Shopian", "Srinagar", "Udhampur",
+    "Gulmarg", "Pahalgam", "Sonamarg", "Patnitop", "Vaishno Devi", "Leh"
+  ],
+  "Ladakh": [
+    "Leh", "Kargil", "Nubra Valley", "Pangong Lake", "Tso Moriri", "Zanskar",
+    "Hemis", "Thiksey", "Diskit", "Khardung La"
+  ],
+  "Lakshadweep": [
+    "Agatti", "Amini", "Andrott", "Bangaram", "Bitra", "Chetlat", "Kadmat",
+    "Kalpeni", "Kavaratti", "Kiltan", "Minicoy"
+  ],
+  "Puducherry": [
+    "Karaikal", "Mahe", "Puducherry", "Yanam", "Pondicherry", "Auroville",
+    "White Town", "Promenade Beach"
+  ]
 };
 
-// Fetch districts for a state
-export const fetchDistricts = async (stateName: string): Promise<string[]> => {
-  const cacheKey = stateName.toLowerCase();
-  if (cache.districts[cacheKey]) {
-    return cache.districts[cacheKey].map(d => d.name);
-  }
-  
-  try {
-    const response = await fetch(`${API_BASE}/locations/districts?state=${encodeURIComponent(stateName)}`);
-    if (!response.ok) throw new Error('API unavailable');
-    const data = await response.json();
-    cache.districts[cacheKey] = data.data || data;
-    return (cache.districts[cacheKey] || []).map(d => d.name);
-  } catch (error) {
-    console.warn('Error fetching districts:', error);
-    return [];
-  }
-};
+// Flatten all cities for quick search
+const ALL_LOCATIONS: LocationResult[] = [];
+INDIAN_STATES.forEach(state => {
+  ALL_LOCATIONS.push({ name: state, type: 'state' });
+  const districts = DISTRICTS_BY_STATE[state] || [];
+  districts.forEach(district => {
+    ALL_LOCATIONS.push({
+      name: district,
+      type: 'city',
+      parent: state,
+      fullName: `${district}, ${state}`
+    });
+  });
+});
 
-// Search locations with fuzzy matching
-export const searchLocations = async (query: string): Promise<LocationResult[]> => {
-  if (!query || query.length < 2) return [];
-  
-  const cacheKey = query.toLowerCase();
-  if (cache.searchResults[cacheKey]) {
-    return cache.searchResults[cacheKey] as LocationResult[];
-  }
-  
-  try {
-    const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&limit=15`);
-    if (!response.ok) throw new Error('API unavailable');
-    const data = await response.json();
-    
-    const results: LocationResult[] = (data.data || data || []).map((item: any) => ({
-      name: item.name,
-      type: item.type || 'city',
-      parent: item.state || item.district || item.parent,
-      fullName: item.state ? `${item.name}, ${item.state}` : item.name,
-    }));
-    
-    cache.searchResults[cacheKey] = results;
-    return results;
-  } catch (error) {
-    console.warn('Search API error, using fallback:', error);
-    // Fallback to local search
-    const lowerQuery = query.toLowerCase();
-    return fallbackCities
-      .filter(city => city.toLowerCase().includes(lowerQuery))
-      .slice(0, 10)
-      .map(city => ({ name: city, type: 'city' as const }));
-  }
-};
+// Popular cities for quick access
+export const POPULAR_CITIES = [
+  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune",
+  "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur", "Nagpur", "Indore",
+  "Thane", "Bhopal", "Visakhapatnam", "Vadodara", "Ghaziabad", "Ludhiana",
+  "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Varanasi", "Srinagar",
+  "Aurangabad", "Dhanbad", "Amritsar", "Navi Mumbai", "Allahabad", "Ranchi",
+  "Howrah", "Coimbatore", "Jabalpur", "Gwalior", "Vijayawada", "Jodhpur",
+  "Madurai", "Raipur", "Kota", "Chandigarh", "Guwahati", "Solapur",
+  "Noida", "Gurgaon", "Kochi", "Trivandrum", "Mysore", "Mangalore"
+];
 
-// Get cities - now fetches from API or uses fallback
-export const getCities = async (): Promise<string[]> => {
-  try {
-    const states = await fetchStates();
-    return states.length > 0 ? states : fallbackCities;
-  } catch {
-    return fallbackCities;
+// Search locations
+export const searchLocations = (query: string): LocationResult[] => {
+  if (!query || query.length < 2) {
+    return POPULAR_CITIES.slice(0, 15).map(city => {
+      const found = ALL_LOCATIONS.find(l => l.name === city && l.type === 'city');
+      return found || { name: city, type: 'city' as const };
+    });
   }
-};
 
-// Search cities with API
-export const searchCities = async (query: string): Promise<string[]> => {
-  if (!query.trim()) {
-    return fallbackCities.slice(0, 15);
-  }
-  
-  const results = await searchLocations(query);
-  const cityNames = results
-    .filter(r => r.type === 'district' || r.type === 'city' || r.type === 'state')
-    .map(r => r.fullName || r.name);
-  
-  if (cityNames.length === 0) {
-    // Fallback to local filter
-    const lowerQuery = query.toLowerCase();
-    return fallbackCities.filter(city => 
-      city.toLowerCase().includes(lowerQuery)
-    ).slice(0, 10);
-  }
-  
-  return cityNames;
-};
-
-// Search areas within a city/district
-export const searchAreas = async (city: string, query: string): Promise<string[]> => {
-  if (!city) return [];
-  
-  try {
-    // Search for talukas/villages within the district
-    const searchQuery = query ? `${query} ${city}` : city;
-    const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(searchQuery)}&limit=20`);
-    if (!response.ok) throw new Error('API unavailable');
-    const data = await response.json();
-    
-    const results = (data.data || data || [])
-      .filter((item: any) => item.type === 'taluka' || item.type === 'village')
-      .map((item: any) => item.name)
-      .slice(0, 15);
-    
-    return results.length > 0 ? results : [`${city} Central`, `${city} North`, `${city} South`, `${city} East`, `${city} West`];
-  } catch (error) {
-    console.warn('Area search error:', error);
-    return [`${city} Central`, `${city} North`, `${city} South`, `${city} East`, `${city} West`];
-  }
-};
-
-// Synchronous versions for backward compatibility (uses cached data)
-export const getCitiesSync = (): string[] => {
-  if (cache.states && cache.states.length > 0) {
-    return cache.states.map(s => s.name);
-  }
-  return fallbackCities;
-};
-
-export const searchCitiesSync = (query: string): string[] => {
-  if (!query.trim()) return fallbackCities.slice(0, 15);
   const lowerQuery = query.toLowerCase();
-  
-  // Check cache first
-  const cached = cache.searchResults[lowerQuery];
-  if (cached) {
-    return cached.map(r => (r as LocationResult).fullName || r.name);
-  }
-  
-  // Fallback to local filter
-  return fallbackCities.filter(city => 
-    city.toLowerCase().includes(lowerQuery)
-  ).slice(0, 10);
+  const results: LocationResult[] = [];
+  const seen = new Set<string>();
+
+  // Exact matches first
+  ALL_LOCATIONS.forEach(loc => {
+    if (loc.name.toLowerCase() === lowerQuery && !seen.has(loc.fullName || loc.name)) {
+      results.push(loc);
+      seen.add(loc.fullName || loc.name);
+    }
+  });
+
+  // Starts with query
+  ALL_LOCATIONS.forEach(loc => {
+    if (loc.name.toLowerCase().startsWith(lowerQuery) && !seen.has(loc.fullName || loc.name)) {
+      results.push(loc);
+      seen.add(loc.fullName || loc.name);
+    }
+  });
+
+  // Contains query
+  ALL_LOCATIONS.forEach(loc => {
+    if (loc.name.toLowerCase().includes(lowerQuery) && !seen.has(loc.fullName || loc.name)) {
+      results.push(loc);
+      seen.add(loc.fullName || loc.name);
+    }
+  });
+
+  return results.slice(0, 20);
 };
 
-// Legacy exports for backward compatibility
+// Async wrapper for compatibility
+export const searchCities = async (query: string): Promise<string[]> => {
+  const results = searchLocations(query);
+  return results.map(r => r.fullName || r.name);
+};
+
+// Sync version
+export const searchCitiesSync = (query: string): string[] => {
+  const results = searchLocations(query);
+  return results.map(r => r.fullName || r.name);
+};
+
+// Get all cities
+export const getCities = async (): Promise<string[]> => {
+  return POPULAR_CITIES;
+};
+
+export const getCitiesSync = (): string[] => {
+  return POPULAR_CITIES;
+};
+
+// Get states
+export const fetchStates = async (): Promise<string[]> => {
+  return INDIAN_STATES;
+};
+
+// Get districts for a state
+export const fetchDistricts = async (stateName: string): Promise<string[]> => {
+  return DISTRICTS_BY_STATE[stateName] || [];
+};
+
+// Search areas within a city
+export const searchAreas = async (city: string, query: string): Promise<string[]> => {
+  // For now, return generic areas. In future, this could be enhanced with more specific data
+  const baseAreas = [`${city} Central`, `${city} North`, `${city} South`, `${city} East`, `${city} West`];
+  
+  if (!query) return baseAreas;
+  
+  const lowerQuery = query.toLowerCase();
+  return baseAreas.filter(area => area.toLowerCase().includes(lowerQuery));
+};
+
+// Get areas for city (legacy)
 export const getAreasForCity = (city: string): string[] => {
   return [`${city} Central`, `${city} North`, `${city} South`, `${city} East`, `${city} West`];
 };
