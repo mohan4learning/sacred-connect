@@ -55,14 +55,12 @@ export default function PurohitListing() {
   const fetchPurohits = async () => {
     setLoading(true);
     
+    // Use purohits_public view for broader access
     let query = supabase
-      .from('purohits')
+      .from('purohits_public')
       .select(`
         id, full_name, city, area, languages, experience_years, bio,
-        remote_pooja_available, in_person_available,
-        purohit_services (
-          pooja_services (name)
-        )
+        remote_pooja_available, in_person_available
       `);
 
     if (cityFilter) {
@@ -75,19 +73,36 @@ export default function PurohitListing() {
       query = query.eq('in_person_available', true);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching purohits:', error);
+      setLoading(false);
+      return;
+    }
 
     if (data) {
-      // Get booking counts
-      const { data: bookingCounts } = await supabase
-        .from('bookings')
-        .select('purohit_id')
-        .eq('status', 'completed');
-
-      const countMap: Record<string, number> = {};
-      bookingCounts?.forEach((b: any) => {
-        countMap[b.purohit_id] = (countMap[b.purohit_id] || 0) + 1;
-      });
+      // Get services for each purohit separately
+      const purohitIds = data.map((p: any) => p.id).filter(Boolean);
+      
+      let servicesMap: Record<string, string[]> = {};
+      if (purohitIds.length > 0) {
+        const { data: servicesData } = await supabase
+          .from('purohit_services')
+          .select('purohit_id, pooja_services (name)')
+          .in('purohit_id', purohitIds);
+        
+        if (servicesData) {
+          servicesData.forEach((s: any) => {
+            if (!servicesMap[s.purohit_id]) {
+              servicesMap[s.purohit_id] = [];
+            }
+            if (s.pooja_services?.name) {
+              servicesMap[s.purohit_id].push(s.pooja_services.name);
+            }
+          });
+        }
+      }
 
       let processed = data.map((p: any) => ({
         id: p.id,
@@ -99,8 +114,8 @@ export default function PurohitListing() {
         bio: p.bio,
         remote_pooja_available: p.remote_pooja_available,
         in_person_available: p.in_person_available,
-        services: p.purohit_services?.map((ps: any) => ps.pooja_services?.name).filter(Boolean) || [],
-        bookingCount: countMap[p.id] || 0,
+        services: servicesMap[p.id] || [],
+        bookingCount: 0, // We don't show booking count to other purohits for privacy
       }));
 
       // Filter by service
@@ -123,8 +138,6 @@ export default function PurohitListing() {
       // Sort
       if (sortBy === 'experience') {
         processed.sort((a, b) => b.experience_years - a.experience_years);
-      } else if (sortBy === 'reviews') {
-        processed.sort((a, b) => b.bookingCount - a.bookingCount);
       }
 
       setPurohits(processed);
