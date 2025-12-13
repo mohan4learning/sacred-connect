@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LocationAutocomplete } from "@/components/LocationAutocomplete";
-import { ArrowLeft, Save, Camera, Loader2, User } from "lucide-react";
+import { ArrowLeft, Save, Camera, Loader2, User, Trash2 } from "lucide-react";
 
 export default function ClientProfile() {
   const navigate = useNavigate();
@@ -77,6 +77,29 @@ export default function ClientProfile() {
     } catch (error: any) {
       console.error("Upload error:", error);
       toast.error("Failed to upload photo");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!avatarUrl) return;
+
+    setUploadingAvatar(true);
+
+    try {
+      // Extract the file path from the URL
+      const urlParts = avatarUrl.split('/avatars/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+        await supabase.storage.from('avatars').remove([filePath]);
+      }
+
+      setAvatarUrl(null);
+      toast.success("Photo removed");
+    } catch (error: any) {
+      console.error("Remove error:", error);
+      toast.error("Failed to remove photo");
     } finally {
       setUploadingAvatar(false);
     }
@@ -193,9 +216,24 @@ export default function ClientProfile() {
                     onChange={handleAvatarUpload}
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Click the camera icon to upload a profile photo
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    Click the camera icon to upload a photo
+                  </p>
+                  {avatarUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={handleRemoveAvatar}
+                      disabled={uploadingAvatar}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
