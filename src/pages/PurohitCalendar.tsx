@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Video, Users, Phone, Mail, FileText } from "lucide-react";
+import { MapPin, Video, Users, Phone, Mail, FileText, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { addMinutes, format } from "date-fns";
 
@@ -131,7 +131,15 @@ export default function PurohitCalendar() {
     <Layout>
       <div className="container py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-display text-3xl font-bold">My Calendar</h1>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/purohit">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Link>
+            </Button>
+            <h1 className="font-display text-3xl font-bold">My Calendar</h1>
+          </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Filter status" />
@@ -149,18 +157,18 @@ export default function PurohitCalendar() {
         {loading ? (
           <p className="text-muted-foreground">Loading calendar...</p>
         ) : (
-          <div className="bg-card rounded-lg p-4 shadow-sm border">
+          <div className="bg-card rounded-lg p-4 shadow-sm border min-h-[calc(100vh-200px)]">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView="dayGridMonth"
               headerToolbar={{
                 left: "prev,next today",
                 center: "title",
-                right: "dayGridMonth,timeGridWeek",
+                right: "dayGridMonth,timeGridWeek,timeGridDay",
               }}
               events={filteredEvents}
               eventClick={handleEventClick}
-              height="auto"
+              height="calc(100vh - 280px)"
               eventTimeFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
             />
           </div>

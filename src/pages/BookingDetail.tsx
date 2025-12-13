@@ -6,7 +6,8 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ArrowLeft, MapPin, Video, Users, Calendar, Phone, Mail, FileText, ExternalLink } from "lucide-react";
+import { ReviewDialog } from "@/components/ReviewDialog";
+import { ArrowLeft, MapPin, Video, Users, Calendar, Phone, Mail, FileText, ExternalLink, Star } from "lucide-react";
 import { format, addMinutes } from "date-fns";
 import { toast } from "sonner";
 
@@ -28,15 +29,28 @@ interface BookingDetail {
   service: { name: string } | null;
 }
 
+interface Review {
+  id: string;
+  rating: number;
+  review_text: string | null;
+  reviewer_role: string;
+  created_at: string;
+}
+
 export default function BookingDetail() {
   const { id } = useParams<{ id: string }>();
   const { session, isClient, isPurohit } = useSession();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (id) fetchBooking();
+    if (id) {
+      fetchBooking();
+      fetchReviews();
+    }
   }, [id]);
 
   const fetchBooking = async () => {
@@ -61,6 +75,16 @@ export default function BookingDetail() {
     setLoading(false);
   };
 
+  const fetchReviews = async () => {
+    const { data } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("booking_id", id)
+      .order("created_at", { ascending: false });
+
+    if (data) setReviews(data);
+  };
+
   const updateStatus = async (newStatus: "pending" | "confirmed" | "completed" | "cancelled") => {
     if (!booking) return;
     const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", booking.id);
@@ -72,6 +96,12 @@ export default function BookingDetail() {
       setBooking({ ...booking, status: newStatus });
     }
   };
+
+  const hasUserReviewed = reviews.some(
+    (r) => r.reviewer_role === (isClient ? "client" : "purohit")
+  );
+
+  const canLeaveReview = booking?.status === "completed" && !hasUserReviewed;
 
   if (loading) {
     return (
@@ -173,7 +203,7 @@ export default function BookingDetail() {
             {booking.price_agreed && (
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-1">Agreed Price</h3>
-                <p className="text-lg font-medium text-primary">₹{booking.price_agreed}</p>
+                <p className="text-lg font-medium text-primary">₹{booking.price_agreed.toLocaleString()}</p>
               </div>
             )}
 
@@ -186,28 +216,86 @@ export default function BookingDetail() {
               </div>
             )}
 
-            {isPurohit && (
-              <div className="border-t pt-4 space-y-2">
-                <h3 className="font-semibold mb-2">Actions</h3>
-                {booking.status === "pending" && (
-                  <Button onClick={() => updateStatus("confirmed")} className="w-full">
-                    Confirm Booking
-                  </Button>
-                )}
-                {booking.status === "confirmed" && (
-                  <Button onClick={() => updateStatus("completed")} className="w-full">
-                    Mark as Completed
-                  </Button>
-                )}
-                {["pending", "confirmed"].includes(booking.status) && (
-                  <Button variant="destructive" onClick={() => updateStatus("cancelled")} className="w-full">
-                    Cancel Booking
-                  </Button>
-                )}
+            {/* Reviews Section */}
+            {reviews.length > 0 && (
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Star className="h-4 w-4" /> Reviews
+                </h3>
+                <div className="space-y-3">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-4 w-4 ${
+                                star <= review.rating
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-muted-foreground"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          by {review.reviewer_role}
+                        </span>
+                      </div>
+                      {review.review_text && (
+                        <p className="text-sm text-muted-foreground">{review.review_text}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Actions */}
+            <div className="border-t pt-4 space-y-2">
+              {canLeaveReview && (
+                <Button 
+                  onClick={() => setReviewDialogOpen(true)} 
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Leave a Review
+                </Button>
+              )}
+
+              {isPurohit && (
+                <>
+                  {booking.status === "pending" && (
+                    <Button onClick={() => updateStatus("confirmed")} className="w-full">
+                      Confirm Booking
+                    </Button>
+                  )}
+                  {booking.status === "confirmed" && (
+                    <Button onClick={() => updateStatus("completed")} className="w-full">
+                      Mark as Completed
+                    </Button>
+                  )}
+                  {["pending", "confirmed"].includes(booking.status) && (
+                    <Button variant="destructive" onClick={() => updateStatus("cancelled")} className="w-full">
+                      Cancel Booking
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
+
+        <ReviewDialog
+          open={reviewDialogOpen}
+          onOpenChange={setReviewDialogOpen}
+          bookingId={booking.id}
+          reviewerId={session!.profileId}
+          reviewerRole={isClient ? "client" : "purohit"}
+          recipientName={otherParty.full_name}
+          onReviewSubmitted={fetchReviews}
+        />
       </div>
     </Layout>
   );

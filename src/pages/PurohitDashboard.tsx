@@ -248,7 +248,7 @@ export default function PurohitDashboard() {
                 </div>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/purohit/edit">
+                <Link to="/purohit/portfolio">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Portfolio
                 </Link>
@@ -292,11 +292,17 @@ export default function PurohitDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-8">
           <Button asChild size="lg" className="h-auto py-6 flex-col gap-2 btn-hero">
-            <Link to="/purohit/edit">
+            <Link to="/purohit/portfolio">
               <Edit className="h-6 w-6" />
               <span>Edit Portfolio</span>
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
+            <Link to="/purohit/services">
+              <Sparkles className="h-6 w-6" />
+              <span>My Services</span>
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
@@ -324,9 +330,9 @@ export default function PurohitDashboard() {
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
-            <Link to="/purohit/services">
-              <Users className="h-6 w-6" />
-              <span>My Services</span>
+            <Link to="/bookings">
+              <IndianRupee className="h-6 w-6" />
+              <span>Earnings</span>
             </Link>
           </Button>
         </div>

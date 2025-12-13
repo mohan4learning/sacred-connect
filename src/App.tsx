@@ -11,6 +11,7 @@ import PurohitDashboard from "./pages/PurohitDashboard";
 import PurohitListing from "./pages/PurohitListing";
 import PurohitProfile from "./pages/PurohitProfile";
 import PurohitServices from "./pages/PurohitServices";
+import PurohitPortfolio from "./pages/PurohitPortfolio";
 import Bookings from "./pages/Bookings";
 import BookingDetail from "./pages/BookingDetail";
 import Consultations from "./pages/Consultations";
@@ -39,6 +40,8 @@ const App = () => (
           <Route path="/purohit/calendar" element={<PurohitCalendar />} />
           <Route path="/purohit/locations" element={<PurohitLocations />} />
           <Route path="/purohit/services" element={<PurohitServices />} />
+          <Route path="/purohit/portfolio" element={<PurohitPortfolio />} />
+          <Route path="/purohit/edit" element={<PurohitPortfolio />} />
           <Route path="/purohits" element={<PurohitListing />} />
           <Route path="/purohits/:id" element={<PurohitProfile />} />
           <Route path="/bookings" element={<Bookings />} />

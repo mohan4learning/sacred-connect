@@ -23,6 +23,7 @@ interface PurohitDetail {
   bio: string | null;
   remote_pooja_available: boolean;
   in_person_available: boolean;
+  avatar_url: string | null;
 }
 
 interface ServiceItem {
@@ -199,11 +200,19 @@ export default function PurohitProfile() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row gap-6">
-              <div className="w-24 h-24 rounded-full gradient-hero flex items-center justify-center flex-shrink-0">
-                <span className="text-primary-foreground font-display text-4xl font-bold">
-                  {purohit.full_name.charAt(0)}
-                </span>
-              </div>
+              {purohit.avatar_url ? (
+                <img 
+                  src={purohit.avatar_url} 
+                  alt={purohit.full_name}
+                  className="w-24 h-24 rounded-full object-cover flex-shrink-0 border-4 border-background shadow-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full gradient-hero flex items-center justify-center flex-shrink-0">
+                  <span className="text-primary-foreground font-display text-4xl font-bold">
+                    {purohit.full_name.charAt(0)}
+                  </span>
+                </div>
+              )}
               
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-2">
