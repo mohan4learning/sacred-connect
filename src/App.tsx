@@ -10,7 +10,11 @@ import PurohitDashboard from "./pages/PurohitDashboard";
 import PurohitListing from "./pages/PurohitListing";
 import PurohitProfile from "./pages/PurohitProfile";
 import Bookings from "./pages/Bookings";
+import BookingDetail from "./pages/BookingDetail";
 import Consultations from "./pages/Consultations";
+import ConsultationDetail from "./pages/ConsultationDetail";
+import RequestPooja from "./pages/RequestPooja";
+import PurohitCalendar from "./pages/PurohitCalendar";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
@@ -27,10 +31,14 @@ const App = () => (
           <Route path="/start" element={<Start />} />
           <Route path="/client" element={<ClientDashboard />} />
           <Route path="/purohit" element={<PurohitDashboard />} />
+          <Route path="/purohit/calendar" element={<PurohitCalendar />} />
           <Route path="/purohits" element={<PurohitListing />} />
           <Route path="/purohits/:id" element={<PurohitProfile />} />
           <Route path="/bookings" element={<Bookings />} />
+          <Route path="/bookings/:id" element={<BookingDetail />} />
           <Route path="/consultations" element={<Consultations />} />
+          <Route path="/consultations/:id" element={<ConsultationDetail />} />
+          <Route path="/request" element={<RequestPooja />} />
           <Route path="/help" element={<Help />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -5,7 +5,7 @@ type StatusType =
   | 'requested' | 'accepted' | 'open' | 'matched' | 'closed';
 
 interface StatusBadgeProps {
-  status: StatusType;
+  status: StatusType | string;
   className?: string;
 }
 
