@@ -100,6 +100,7 @@ export type Database = {
           full_name: string
           id: string
           phone: string | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -110,6 +111,7 @@ export type Database = {
           full_name: string
           id?: string
           phone?: string | null
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -120,8 +122,17 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consultation_messages: {
         Row: {
@@ -307,6 +318,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id: string
+          phone?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       purohit_availability_blocks: {
         Row: {
           created_at: string
@@ -431,11 +472,13 @@ export type Database = {
           full_name: string
           id: string
           in_person_available: boolean | null
+          is_verified: boolean | null
           languages: string[] | null
           phone: string | null
           remote_pooja_available: boolean | null
           service_radius_km: number | null
           serviceable_cities: string[] | null
+          user_id: string | null
         }
         Insert: {
           area?: string | null
@@ -448,11 +491,13 @@ export type Database = {
           full_name: string
           id?: string
           in_person_available?: boolean | null
+          is_verified?: boolean | null
           languages?: string[] | null
           phone?: string | null
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
+          user_id?: string | null
         }
         Update: {
           area?: string | null
@@ -465,13 +510,23 @@ export type Database = {
           full_name?: string
           id?: string
           in_person_available?: boolean | null
+          is_verified?: boolean | null
           languages?: string[] | null
           phone?: string | null
           remote_pooja_available?: boolean | null
           service_radius_km?: number | null
           serviceable_cities?: string[] | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "purohits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -508,9 +563,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_my_client_id: { Args: never; Returns: string }
+      get_my_purohit_id: { Args: never; Returns: string }
+      get_my_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "client" | "purohit"
       booking_status: "pending" | "confirmed" | "completed" | "cancelled"
       consultation_status: "requested" | "accepted" | "completed" | "cancelled"
       pooja_request_status: "open" | "matched" | "closed"
@@ -644,6 +712,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "client", "purohit"],
       booking_status: ["pending", "confirmed", "completed", "cancelled"],
       consultation_status: ["requested", "accepted", "completed", "cancelled"],
       pooja_request_status: ["open", "matched", "closed"],
