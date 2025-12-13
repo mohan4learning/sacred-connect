@@ -306,18 +306,31 @@ export default function AdminDashboard() {
 
       case 'reviews':
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {dialogData.map((review) => (
-              <div key={review.id} className="p-4 border-b last:border-0">
-                <div className="flex items-center gap-2 mb-1">
+              <div key={review.id} className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex text-amber-500">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-current' : ''}`} />
+                      <Star key={i} className={cn("h-4 w-4", i < review.rating ? 'fill-current' : 'opacity-30')} />
                     ))}
                   </div>
                   <span className="text-xs text-muted-foreground">{format(new Date(review.created_at), 'MMM d, yyyy')}</span>
                 </div>
-                {review.review_text && <p className="text-sm">{review.review_text}</p>}
+                {review.review_text && (
+                  <p className="text-sm mb-3 italic">"{review.review_text}"</p>
+                )}
+                <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2 mt-2">
+                  <div>
+                    <span className="font-medium">Service:</span> {review.bookings?.pooja_services?.name || 'N/A'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Purohit:</span> {review.bookings?.purohits?.full_name || 'N/A'}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  <span className="font-medium">Client:</span> {review.bookings?.clients?.full_name || 'N/A'}
+                </div>
               </div>
             ))}
           </div>
@@ -608,7 +621,10 @@ export default function AdminDashboard() {
                 </div>
                 {stats.avgRating > 0 && (
                   <div className="border-t pt-4 mt-4">
-                    <div className="flex justify-between items-center">
+                    <div 
+                      className="flex justify-between items-center cursor-pointer hover:bg-muted/50 p-2 -mx-2 rounded"
+                      onClick={() => openDialog('reviews')}
+                    >
                       <span className="text-sm uppercase tracking-wider font-bold">Avg Rating</span>
                       <span className="text-2xl font-bold flex items-center gap-1">
                         {stats.avgRating.toFixed(1)}
