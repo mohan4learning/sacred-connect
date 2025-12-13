@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
 import AdminLogin from "./pages/AdminLogin";
 import ClientDashboard from "./pages/ClientDashboard";
+import ClientProfile from "./pages/ClientProfile";
 import ClientPoojaRequests from "./pages/ClientPoojaRequests";
 import PurohitDashboard from "./pages/PurohitDashboard";
 import PurohitListing from "./pages/PurohitListing";
@@ -49,6 +50,7 @@ const App = () => (
 
             {/* Client routes */}
             <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
+            <Route path="/client/edit" element={<ProtectedRoute allowedRoles={['client']}><ClientProfile /></ProtectedRoute>} />
             <Route path="/client/requests" element={<ProtectedRoute allowedRoles={['client']}><ClientPoojaRequests /></ProtectedRoute>} />
             <Route path="/request" element={<ProtectedRoute allowedRoles={['client']}><RequestPooja /></ProtectedRoute>} />
 
