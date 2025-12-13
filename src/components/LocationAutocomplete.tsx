@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { searchCities, searchAreas, getCities, getAreasForCity } from "@/lib/indianLocations";
+import { searchCities, searchAreas, getCitiesSync, getAreasForCity } from "@/lib/indianLocations";
 
 interface LocationAutocompleteProps {
   type: 'city' | 'area';
@@ -26,7 +26,9 @@ export function LocationAutocomplete({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(value);
+  const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     setInputValue(value);
@@ -43,13 +45,46 @@ export function LocationAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (type === 'city') {
-      setSuggestions(searchCities(inputValue));
-    } else if (type === 'area' && city) {
-      setSuggestions(searchAreas(city, inputValue));
+  const fetchSuggestions = useCallback(async (query: string) => {
+    setIsLoading(true);
+    try {
+      if (type === 'city') {
+        const results = await searchCities(query);
+        setSuggestions(results);
+      } else if (type === 'area' && city) {
+        const results = await searchAreas(city, query);
+        setSuggestions(results);
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      // Fallback to sync methods
+      if (type === 'city') {
+        setSuggestions(getCitiesSync().slice(0, 10));
+      } else if (city) {
+        setSuggestions(getAreasForCity(city));
+      }
+    } finally {
+      setIsLoading(false);
     }
-  }, [inputValue, type, city]);
+  }, [type, city]);
+
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      if (showSuggestions) {
+        fetchSuggestions(inputValue);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [inputValue, fetchSuggestions, showSuggestions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -66,16 +101,12 @@ export function LocationAutocomplete({
 
   const handleFocus = () => {
     setShowSuggestions(true);
-    if (type === 'city') {
-      setSuggestions(inputValue ? searchCities(inputValue) : getCities().slice(0, 10));
-    } else if (type === 'area' && city) {
-      setSuggestions(inputValue ? searchAreas(city, inputValue) : getAreasForCity(city).slice(0, 10));
-    }
+    fetchSuggestions(inputValue);
   };
 
   const defaultPlaceholder = type === 'city' 
-    ? "Select or type city..." 
-    : "Select or type area...";
+    ? "Search city or district..." 
+    : "Search area...";
 
   return (
     <div ref={wrapperRef} className={cn("relative", className)}>
@@ -89,26 +120,29 @@ export function LocationAutocomplete({
           className="pl-10"
           disabled={disabled}
         />
+        {isLoading && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+        )}
       </div>
 
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-48 overflow-auto">
           <ul className="py-1">
-            {suggestions.map((suggestion) => (
+            {suggestions.map((suggestion, index) => (
               <li
-                key={suggestion}
+                key={`${suggestion}-${index}`}
                 onClick={() => handleSelect(suggestion)}
                 className="px-4 py-2 hover:bg-muted cursor-pointer text-sm text-foreground flex items-center gap-2"
               >
-                <MapPin className="h-3 w-3 text-muted-foreground" />
-                {suggestion}
+                <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                <span className="truncate">{suggestion}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {showSuggestions && suggestions.length === 0 && inputValue && (
+      {showSuggestions && !isLoading && suggestions.length === 0 && inputValue && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 p-3 text-sm text-muted-foreground">
           No matches found. You can still use "{inputValue}"
         </div>
