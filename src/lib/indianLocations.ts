@@ -97,14 +97,14 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
     "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag", "Hassan", "Haveri",
     "Kalaburagi", "Kodagu", "Kolar", "Koppal", "Mandya", "Mysuru", "Raichur",
     "Ramanagara", "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada", "Vijayapura",
-    "Yadgir", "Mangaluru", "Hubli", "Belgaum", "Gulbarga"
+    "Yadgir", "Mangaluru", "Hubballi-Dharwad", "Bengaluru"
   ],
   "Kerala": [
     "Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam",
     "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta",
-    "Thiruvananthapuram", "Thrissur", "Wayanad", "Kochi", "Calicut",
-    "Trivandrum", "Munnar", "Thekkady", "Alleppey", "Kumarakom", "Guruvayur",
-    "Kovalam", "Varkala", "Bekal", "Fort Kochi"
+    "Thiruvananthapuram", "Thrissur", "Wayanad", "Kochi", "Munnar", 
+    "Thekkady", "Kumarakom", "Guruvayur", "Kovalam", "Varkala", "Bekal", 
+    "Fort Kochi"
   ],
   "Madhya Pradesh": [
     "Agar Malwa", "Alirajpur", "Anuppur", "Ashoknagar", "Balaghat", "Barwani",
@@ -117,10 +117,10 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
     "Ujjain", "Umaria", "Vidisha", "Orchha", "Khajuraho", "Sanchi", "Pachmarhi"
   ],
   "Maharashtra": [
-    "Ahmednagar", "Akola", "Amravati", "Aurangabad", "Beed", "Bhandara",
+    "Ahmednagar", "Akola", "Amravati", "Chhatrapati Sambhajinagar", "Beed", "Bhandara",
     "Buldhana", "Chandrapur", "Dhule", "Gadchiroli", "Gondia", "Hingoli",
     "Jalgaon", "Jalna", "Kolhapur", "Latur", "Mumbai City", "Mumbai Suburban",
-    "Nagpur", "Nanded", "Nandurbar", "Nashik", "Osmanabad", "Palghar", "Parbhani",
+    "Nagpur", "Nanded", "Nandurbar", "Nashik", "Dharashiv", "Palghar", "Parbhani",
     "Pune", "Raigad", "Ratnagiri", "Sangli", "Satara", "Sindhudurg", "Solapur",
     "Thane", "Wardha", "Washim", "Yavatmal", "Navi Mumbai", "Panvel", "Kalyan",
     "Dombivli", "Vasai", "Virar", "Mira Road", "Bhiwandi", "Ulhasnagar",
@@ -181,7 +181,7 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
     "Sivaganga", "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli",
     "Tirunelveli", "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai",
     "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar", "Ooty", "Kodaikanal",
-    "Mahabalipuram", "Rameswaram", "Pondicherry"
+    "Mahabalipuram", "Rameswaram"
   ],
   "Telangana": [
     "Adilabad", "Bhadradri Kothagudem", "Hyderabad", "Jagtial", "Jangaon",
@@ -209,8 +209,8 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
     "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit", "Pratapgarh",
     "Prayagraj", "Raebareli", "Rampur", "Saharanpur", "Sambhal", "Sant Kabir Nagar",
     "Shahjahanpur", "Shamli", "Shravasti", "Siddharthnagar", "Sitapur", "Sonbhadra",
-    "Sultanpur", "Unnao", "Varanasi", "Noida", "Greater Noida", "Gurgaon",
-    "Allahabad", "Vrindavan", "Fatehpur Sikri", "Sarnath"
+    "Sultanpur", "Unnao", "Varanasi", "Noida", "Greater Noida", "Vrindavan", 
+    "Fatehpur Sikri", "Sarnath"
   ],
   "Uttarakhand": [
     "Almora", "Bageshwar", "Chamoli", "Champawat", "Dehradun", "Haridwar",
@@ -245,8 +245,7 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
     "West Delhi", "Connaught Place", "Karol Bagh", "Chandni Chowk", "Lajpat Nagar",
     "Saket", "Vasant Kunj", "Dwarka", "Rohini", "Pitampura", "Janakpuri",
     "Rajouri Garden", "Greater Kailash", "Defence Colony", "Hauz Khas",
-    "Nehru Place", "Okhla", "Laxmi Nagar", "Preet Vihar", "Mayur Vihar",
-    "Noida Extension", "Gurgaon", "Faridabad"
+    "Nehru Place", "Okhla", "Laxmi Nagar", "Preet Vihar", "Mayur Vihar"
   ],
   "Jammu and Kashmir": [
     "Anantnag", "Bandipora", "Baramulla", "Budgam", "Doda", "Ganderbal",
@@ -263,8 +262,8 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
     "Kalpeni", "Kavaratti", "Kiltan", "Minicoy"
   ],
   "Puducherry": [
-    "Karaikal", "Mahe", "Puducherry", "Yanam", "Pondicherry", "Auroville",
-    "White Town", "Promenade Beach"
+    "Karaikal", "Mahe", "Puducherry", "Yanam", "Auroville", "White Town", 
+    "Promenade Beach"
   ]
 };
 
@@ -283,16 +282,16 @@ INDIAN_STATES.forEach(state => {
   });
 });
 
-// Popular cities for quick access
+// Popular cities for quick access (using current official names)
 export const POPULAR_CITIES = [
-  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune",
-  "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur", "Nagpur", "Indore",
+  "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune",
+  "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur Nagar", "Nagpur", "Indore",
   "Thane", "Bhopal", "Visakhapatnam", "Vadodara", "Ghaziabad", "Ludhiana",
   "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Varanasi", "Srinagar",
-  "Aurangabad", "Dhanbad", "Amritsar", "Navi Mumbai", "Allahabad", "Ranchi",
+  "Chhatrapati Sambhajinagar", "Dhanbad", "Amritsar", "Navi Mumbai", "Prayagraj", "Ranchi",
   "Howrah", "Coimbatore", "Jabalpur", "Gwalior", "Vijayawada", "Jodhpur",
   "Madurai", "Raipur", "Kota", "Chandigarh", "Guwahati", "Solapur",
-  "Noida", "Gurgaon", "Kochi", "Trivandrum", "Mysore", "Mangalore"
+  "Noida", "Gurugram", "Kochi", "Thiruvananthapuram", "Mysuru", "Mangaluru"
 ];
 
 // Search locations
