@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, IndianRupee, Trash2, Edit2, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Plus, IndianRupee, Trash2, Edit2, Sparkles, PenLine } from "lucide-react";
 import { toast } from "sonner";
 
 interface PoojaService {
@@ -38,6 +40,9 @@ export default function PurohitServices() {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dialogTab, setDialogTab] = useState<"existing" | "custom">("existing");
+  const [customServiceName, setCustomServiceName] = useState("");
+  const [customServiceDescription, setCustomServiceDescription] = useState("");
 
   useEffect(() => {
     if (!sessionLoading && (!session || !isPurohit)) {
@@ -89,6 +94,9 @@ export default function PurohitServices() {
     setPriceMin("");
     setPriceMax("");
     setEditingService(null);
+    setDialogTab("existing");
+    setCustomServiceName("");
+    setCustomServiceDescription("");
   };
 
   const handleOpenAdd = () => {
@@ -101,24 +109,70 @@ export default function PurohitServices() {
     setSelectedServiceId(service.service_id);
     setPriceMin(service.price_min?.toString() || "");
     setPriceMax(service.price_max?.toString() || "");
+    setDialogTab("existing");
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!selectedServiceId) {
-      toast.error("Please select a service");
-      return;
-    }
-
     setSaving(true);
 
     try {
+      let serviceIdToUse = selectedServiceId;
+
+      // If adding custom service, first create the pooja_service
+      if (dialogTab === "custom" && !editingService) {
+        const trimmedName = customServiceName.trim();
+        if (!trimmedName) {
+          toast.error("Please enter a service name");
+          setSaving(false);
+          return;
+        }
+
+        if (trimmedName.length > 100) {
+          toast.error("Service name must be less than 100 characters");
+          setSaving(false);
+          return;
+        }
+
+        // Check if service with same name already exists
+        const existingService = allServices.find(
+          s => s.name.toLowerCase() === trimmedName.toLowerCase()
+        );
+
+        if (existingService) {
+          // Use existing service instead of creating duplicate
+          serviceIdToUse = existingService.id;
+        } else {
+          // Create new pooja service
+          const { data: newService, error: createError } = await supabase
+            .from('pooja_services')
+            .insert({
+              name: trimmedName,
+              description: customServiceDescription.trim() || null,
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          serviceIdToUse = newService.id;
+          
+          // Refresh all services list
+          fetchAllServices();
+        }
+      }
+
+      if (!serviceIdToUse) {
+        toast.error("Please select or create a service");
+        setSaving(false);
+        return;
+      }
+
       if (editingService) {
         // Update existing
         const { error } = await supabase
           .from('purohit_services')
           .update({
-            service_id: selectedServiceId,
+            service_id: serviceIdToUse,
             price_min: priceMin ? parseInt(priceMin) : null,
             price_max: priceMax ? parseInt(priceMax) : null,
           })
@@ -128,7 +182,7 @@ export default function PurohitServices() {
         toast.success("Service updated");
       } else {
         // Check if already added
-        const existing = services.find(s => s.service_id === selectedServiceId);
+        const existing = services.find(s => s.service_id === serviceIdToUse);
         if (existing) {
           toast.error("This service is already added");
           setSaving(false);
@@ -140,13 +194,13 @@ export default function PurohitServices() {
           .from('purohit_services')
           .insert({
             purohit_id: session!.profileId,
-            service_id: selectedServiceId,
+            service_id: serviceIdToUse,
             price_min: priceMin ? parseInt(priceMin) : null,
             price_max: priceMax ? parseInt(priceMax) : null,
           });
 
         if (error) throw error;
-        toast.success("Service added");
+        toast.success(dialogTab === "custom" ? "Custom service created and added" : "Service added");
       }
 
       setDialogOpen(false);
@@ -180,6 +234,12 @@ export default function PurohitServices() {
   const availableServices = editingService 
     ? allServices 
     : allServices.filter(s => !services.find(ps => ps.service_id === s.id));
+
+  const isFormValid = editingService 
+    ? !!selectedServiceId
+    : dialogTab === "existing" 
+      ? !!selectedServiceId 
+      : !!customServiceName.trim();
 
   if (sessionLoading || loading) {
     return (
@@ -215,29 +275,75 @@ export default function PurohitServices() {
                 Add Service
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{editingService ? 'Edit Service' : 'Add Service'}</DialogTitle>
                 <DialogDescription>
-                  {editingService ? 'Update your pricing for this service' : 'Select a service and set your pricing'}
+                  {editingService ? 'Update your pricing for this service' : 'Choose an existing service or create your own'}
                 </DialogDescription>
               </DialogHeader>
+              
+              {!editingService && (
+                <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "existing" | "custom")} className="mt-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="existing" className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Existing
+                    </TabsTrigger>
+                    <TabsTrigger value="custom" className="flex items-center gap-2">
+                      <PenLine className="h-4 w-4" />
+                      Custom
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
+
               <div className="space-y-4 pt-4">
-                <div>
-                  <Label htmlFor="service">Pooja Service</Label>
-                  <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select a service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableServices.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {(dialogTab === "existing" || editingService) && (
+                  <div>
+                    <Label htmlFor="service">Pooja Service</Label>
+                    <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select a service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableServices.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {dialogTab === "custom" && !editingService && (
+                  <>
+                    <div>
+                      <Label htmlFor="customName">Service Name *</Label>
+                      <Input
+                        id="customName"
+                        placeholder="e.g. Vastu Shanti Pooja"
+                        value={customServiceName}
+                        onChange={(e) => setCustomServiceName(e.target.value)}
+                        className="mt-1"
+                        maxLength={100}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customDescription">Description (optional)</Label>
+                      <Textarea
+                        id="customDescription"
+                        placeholder="Brief description of the service..."
+                        value={customServiceDescription}
+                        onChange={(e) => setCustomServiceDescription(e.target.value)}
+                        className="mt-1"
+                        rows={2}
+                        maxLength={500}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -271,9 +377,9 @@ export default function PurohitServices() {
                 <Button 
                   className="w-full btn-hero" 
                   onClick={handleSave}
-                  disabled={saving || !selectedServiceId}
+                  disabled={saving || !isFormValid}
                 >
-                  {saving ? 'Saving...' : editingService ? 'Update Service' : 'Add Service'}
+                  {saving ? 'Saving...' : editingService ? 'Update Service' : dialogTab === "custom" ? 'Create & Add Service' : 'Add Service'}
                 </Button>
               </div>
             </DialogContent>
