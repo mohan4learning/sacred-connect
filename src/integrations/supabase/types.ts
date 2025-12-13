@@ -307,6 +307,41 @@ export type Database = {
         }
         Relationships: []
       }
+      purohit_availability_blocks: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          purohit_id: string
+          reason: string | null
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          purohit_id: string
+          reason?: string | null
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          purohit_id?: string
+          reason?: string | null
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purohit_availability_blocks_purohit_id_fkey"
+            columns: ["purohit_id"]
+            isOneToOne: false
+            referencedRelation: "purohits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purohit_portfolio_items: {
         Row: {
           content_text: string | null
