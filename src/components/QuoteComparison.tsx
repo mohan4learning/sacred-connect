@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LayoutGrid, Check, X, MessageSquare, Star, IndianRupee } from "lucide-react";
+import { LayoutGrid, Check, MessageSquare, Star, IndianRupee } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ResponseData {
   id: string;
@@ -22,6 +22,12 @@ interface ResponseData {
   messages: any[];
 }
 
+interface PurohitRating {
+  purohit_id: string;
+  avg_rating: number;
+  review_count: number;
+}
+
 interface QuoteComparisonProps {
   responses: ResponseData[];
   onAccept?: (responseId: string) => void;
@@ -32,6 +38,49 @@ interface QuoteComparisonProps {
 export function QuoteComparison({ responses, onAccept, onOpenBooking, requestStatus }: QuoteComparisonProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [purohitRatings, setPurohitRatings] = useState<Record<string, PurohitRating>>({});
+
+  // Fetch ratings for all purohits in responses
+  useEffect(() => {
+    const fetchRatings = async () => {
+      const purohitIds = [...new Set(responses.map(r => r.purohit_id))];
+      if (purohitIds.length === 0) return;
+
+      // Get completed bookings with reviews for these purohits
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select(`
+          rating,
+          booking_id,
+          bookings!inner(purohit_id)
+        `)
+        .in('bookings.purohit_id', purohitIds);
+
+      if (reviews) {
+        const ratingsMap: Record<string, { total: number; count: number }> = {};
+        reviews.forEach((review: any) => {
+          const pid = review.bookings?.purohit_id;
+          if (pid) {
+            if (!ratingsMap[pid]) ratingsMap[pid] = { total: 0, count: 0 };
+            ratingsMap[pid].total += review.rating;
+            ratingsMap[pid].count += 1;
+          }
+        });
+
+        const result: Record<string, PurohitRating> = {};
+        Object.entries(ratingsMap).forEach(([pid, data]) => {
+          result[pid] = {
+            purohit_id: pid,
+            avg_rating: data.total / data.count,
+            review_count: data.count,
+          };
+        });
+        setPurohitRatings(result);
+      }
+    };
+
+    if (dialogOpen) fetchRatings();
+  }, [responses, dialogOpen]);
 
   // Only show responses with quotes for comparison
   const quotedResponses = responses.filter(r => r.quote);
@@ -151,6 +200,36 @@ export function QuoteComparison({ responses, onAccept, onOpenBooking, requestSta
                             <Badge className="ml-2 bg-emerald-100 text-emerald-700 text-xs">
                               Lowest
                             </Badge>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+
+                  {/* Rating Row */}
+                  <TableRow className="bg-amber-50/50 dark:bg-amber-950/20">
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-amber-500" />
+                        Rating
+                      </div>
+                    </TableCell>
+                    {selectedResponses.map((response) => {
+                      const rating = purohitRatings[response.purohit_id];
+                      return (
+                        <TableCell key={response.id} className="text-center">
+                          {rating ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                                <span className="font-bold">{rating.avg_rating.toFixed(1)}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {rating.review_count} review{rating.review_count !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">No reviews</span>
                           )}
                         </TableCell>
                       );
