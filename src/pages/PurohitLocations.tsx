@@ -5,9 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
 import { ArrowLeft, MapPin, Plus, X, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -151,14 +151,13 @@ export default function PurohitLocations() {
 
             {/* Add New City */}
             <div className="space-y-2">
-              <Label htmlFor="newCity">Add a City</Label>
+              <Label>Add a City</Label>
               <div className="flex gap-2">
-                <Input
-                  id="newCity"
-                  placeholder="Enter city name (e.g., BANGALORE)"
+                <LocationAutocomplete
+                  type="city"
                   value={newCity}
-                  onChange={(e) => setNewCity(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddCity()}
+                  onChange={setNewCity}
+                  placeholder="Select or type city..."
                   className="flex-1"
                 />
                 <Button onClick={handleAddCity} variant="outline">
@@ -167,7 +166,7 @@ export default function PurohitLocations() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Enter city names in uppercase. Press Enter or click Add to include the city.
+                Select from suggestions or type a custom city name. Press Add to include the city.
               </p>
             </div>
 
