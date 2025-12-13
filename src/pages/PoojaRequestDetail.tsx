@@ -9,10 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, Send, Clock, User } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, Send, Clock, User, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface PoojaRequestData {
   id: string;
@@ -32,21 +32,22 @@ interface PoojaRequestData {
   created_at: string;
 }
 
-interface ConsultationResponse {
+interface ResponseData {
   id: string;
   purohit_id: string;
   purohit_name: string;
   status: string;
   created_at: string;
-  first_message: string | null;
+  quote: string | null;
+  message: string | null;
 }
 
 export default function PoojaRequestDetail() {
   const { id } = useParams<{ id: string }>();
-  const { session, loading: sessionLoading, isPurohit } = useSession();
+  const { session, loading: sessionLoading, isPurohit, isClient } = useSession();
   const navigate = useNavigate();
   const [request, setRequest] = useState<PoojaRequestData | null>(null);
-  const [responses, setResponses] = useState<ConsultationResponse[]>([]);
+  const [responses, setResponses] = useState<ResponseData[]>([]);
   const [hasResponded, setHasResponded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [quoteAmount, setQuoteAmount] = useState("");
@@ -54,17 +55,17 @@ export default function PoojaRequestDetail() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!sessionLoading && (!session || !isPurohit)) {
+    if (!sessionLoading && !session) {
       navigate('/start');
     }
-  }, [session, sessionLoading, isPurohit, navigate]);
+  }, [session, sessionLoading, navigate]);
 
   useEffect(() => {
     if (id) {
       fetchRequest();
       fetchResponses();
     }
-  }, [id]);
+  }, [id, session?.profileId]);
 
   const fetchRequest = async () => {
     setLoading(true);
@@ -80,7 +81,7 @@ export default function PoojaRequestDetail() {
 
     if (error || !data) {
       toast.error("Request not found");
-      navigate('/purohit');
+      navigate(isPurohit ? '/purohit' : '/client');
       return;
     }
 
@@ -105,27 +106,28 @@ export default function PoojaRequestDetail() {
   };
 
   const fetchResponses = async () => {
-    if (!session?.profileId) return;
+    if (!id) return;
     
-    // Note: Using service_id to link consultations to pooja requests
-    // This assumes service_id in consultations is used to reference pooja_requests
-    // For now, we'll fetch all consultations for this client and check if current purohit has responded
+    // Fetch consultations linked to this pooja request
     const { data: consultations } = await supabase
       .from('consultations')
       .select(`
         id, purohit_id, status, created_at,
         purohits (full_name)
       `)
+      .eq('pooja_request_id', id)
       .order('created_at', { ascending: false });
 
     if (consultations) {
       // Check if current purohit has already responded
-      const myResponse = consultations.find((c: any) => c.purohit_id === session.profileId);
-      setHasResponded(!!myResponse);
+      if (isPurohit && session?.profileId) {
+        const myResponse = consultations.find((c: any) => c.purohit_id === session.profileId);
+        setHasResponded(!!myResponse);
+      }
 
-      // Get first message for each consultation
+      // Get first message for each consultation to extract quote
       const responsesWithMessages = await Promise.all(
-        consultations.slice(0, 10).map(async (c: any) => {
+        consultations.map(async (c: any) => {
           const { data: messages } = await supabase
             .from('consultation_messages')
             .select('message_text')
@@ -133,13 +135,19 @@ export default function PoojaRequestDetail() {
             .order('created_at', { ascending: true })
             .limit(1);
 
+          const firstMessage = messages?.[0]?.message_text || '';
+          const quoteMatch = firstMessage.match(/Quote: ₹([\d,]+)/);
+          const quote = quoteMatch ? quoteMatch[0] : null;
+          const messageWithoutQuote = firstMessage.replace(/Quote: ₹[\d,]+\n*/, '').trim();
+
           return {
             id: c.id,
             purohit_id: c.purohit_id,
             purohit_name: c.purohits?.full_name || 'Unknown Purohit',
             status: c.status,
             created_at: c.created_at,
-            first_message: messages?.[0]?.message_text || null,
+            quote: quote,
+            message: messageWithoutQuote || null,
           };
         })
       );
@@ -148,17 +156,18 @@ export default function PoojaRequestDetail() {
     }
   };
 
-  const handleStartConsultation = async () => {
+  const handleSubmitResponse = async () => {
     if (!session?.profileId || !request) return;
     
     setSubmitting(true);
     try {
-      // Create a consultation
+      // Create a consultation linked to this pooja request
       const { data: consultation, error: consultationError } = await supabase
         .from('consultations')
         .insert({
           client_id: request.client_id,
           purohit_id: session.profileId,
+          pooja_request_id: request.id,
           mode: request.mode as any,
           status: 'requested',
         })
@@ -186,13 +195,39 @@ export default function PoojaRequestDetail() {
         if (messageError) throw messageError;
       }
 
-      toast.success("Consultation started! The client will be notified.");
-      navigate(`/consultations/${consultation.id}`);
+      toast.success("Response sent! The client will be notified.");
+      setHasResponded(true);
+      setQuoteAmount("");
+      setMessage("");
+      fetchResponses();
     } catch (error) {
-      console.error('Error starting consultation:', error);
-      toast.error("Failed to start consultation");
+      console.error('Error sending response:', error);
+      toast.error("Failed to send response");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAcceptResponse = async (responseId: string) => {
+    try {
+      // Update consultation status to accepted
+      await supabase
+        .from('consultations')
+        .update({ status: 'accepted' })
+        .eq('id', responseId);
+
+      // Update pooja request status to matched
+      await supabase
+        .from('pooja_requests')
+        .update({ status: 'matched' })
+        .eq('id', request?.id);
+
+      toast.success("Response accepted! You can now proceed with booking.");
+      fetchRequest();
+      fetchResponses();
+    } catch (error) {
+      console.error('Error accepting response:', error);
+      toast.error("Failed to accept response");
     }
   };
 
@@ -210,13 +245,15 @@ export default function PoojaRequestDetail() {
     return null;
   }
 
+  const isOwner = isClient && request.client_id === session?.profileId;
+
   return (
     <Layout>
       <div className="container py-8 max-w-3xl">
         <Button variant="ghost" size="sm" asChild className="mb-6">
-          <Link to="/purohit">
+          <Link to={isPurohit ? "/purohit" : "/client/requests"}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            {isPurohit ? "Back to Dashboard" : "Back to My Requests"}
           </Link>
         </Button>
 
@@ -231,7 +268,7 @@ export default function PoojaRequestDetail() {
                   Posted by {request.client_name} on {format(new Date(request.created_at), 'MMMM d, yyyy')}
                 </CardDescription>
               </div>
-              <Badge variant={request.status === 'open' ? 'default' : 'secondary'}>
+              <Badge variant={request.status === 'open' ? 'default' : request.status === 'matched' ? 'secondary' : 'outline'}>
                 {request.status}
               </Badge>
             </div>
@@ -306,56 +343,100 @@ export default function PoojaRequestDetail() {
           </CardContent>
         </Card>
 
-        {/* Responses History */}
-        {responses.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Responses ({responses.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Responses Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Responses ({responses.length})
+            </CardTitle>
+            <CardDescription>
+              {isOwner ? "Quotes and messages from purohits" : "Response history for this request"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {responses.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6">
+                No responses yet.
+              </p>
+            ) : (
               <div className="space-y-4">
                 {responses.map((response) => (
-                  <div key={response.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
+                  <div key={response.id} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{response.purohit_name}</span>
-                        {response.purohit_id === session?.profileId && (
+                        {isPurohit && response.purohit_id === session?.profileId && (
                           <Badge variant="outline" className="text-xs">You</Badge>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(response.created_at), 'MMM d, h:mm a')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={response.status as any} />
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(response.created_at), 'MMM d, h:mm a')}
+                        </span>
+                      </div>
                     </div>
-                    {response.first_message && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{response.first_message}</p>
+                    
+                    {response.quote && (
+                      <div className="mb-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded text-emerald-700 dark:text-emerald-300 font-semibold">
+                        {response.quote}
+                      </div>
+                    )}
+                    
+                    {response.message && (
+                      <p className="text-sm text-muted-foreground">{response.message}</p>
+                    )}
+
+                    {/* Accept button for client on open responses */}
+                    {isOwner && request.status === 'open' && response.status === 'requested' && (
+                      <Button 
+                        size="sm" 
+                        className="mt-3"
+                        onClick={() => handleAcceptResponse(response.id)}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Accept & Proceed
+                      </Button>
+                    )}
+
+                    {/* Chat link for accepted responses */}
+                    {response.status === 'accepted' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="mt-3"
+                        asChild
+                      >
+                        <Link to={`/consultations/${response.id}`}>
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Continue Chat
+                        </Link>
+                      </Button>
                     )}
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Response Card */}
-        {request.status === 'open' && !hasResponded && (
+        {/* Response Form for Purohits */}
+        {isPurohit && request.status === 'open' && !hasResponded && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Respond to This Request
+                <Send className="h-5 w-5" />
+                Send Your Quote
               </CardTitle>
               <CardDescription>
-                Start a consultation with the client to discuss this pooja
+                Respond with your quote and message to the client
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="quote">Your Quote (Optional)</Label>
+                <Label htmlFor="quote">Your Quote</Label>
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                   <Input
@@ -384,12 +465,22 @@ export default function PoojaRequestDetail() {
               <Button 
                 className="w-full btn-hero" 
                 size="lg"
-                onClick={handleStartConsultation}
+                onClick={handleSubmitResponse}
                 disabled={submitting || !message.trim()}
               >
                 <Send className="h-4 w-4 mr-2" />
-                {submitting ? 'Sending...' : 'Start Consultation'}
+                {submitting ? 'Sending...' : 'Send Response'}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {isPurohit && hasResponded && (
+          <Card className="bg-muted/30">
+            <CardContent className="py-6 text-center">
+              <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+              <p className="font-medium">You have already responded to this request</p>
+              <p className="text-sm text-muted-foreground">Wait for the client to review your quote</p>
             </CardContent>
           </Card>
         )}

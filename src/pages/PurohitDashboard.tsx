@@ -365,7 +365,7 @@ export default function PurohitDashboard() {
                 {openRequests.map((request) => (
                   <Link
                     key={request.id}
-                    to={`/pooja-requests/${request.id}`}
+                    to={`/request/${request.id}`}
                     className="block p-4 rounded-lg border hover:bg-muted/50 transition-colors hover:border-saffron-300 cursor-pointer group"
                   >
                     <div className="flex items-start justify-between gap-4">

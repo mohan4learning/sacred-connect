@@ -58,15 +58,14 @@ export default function ClientDashboard() {
   };
 
   const fetchStats = async () => {
-    const [bookingsRes, consultationsRes, requestsRes] = await Promise.all([
+    const [bookingsRes, requestsRes] = await Promise.all([
       supabase.from('bookings').select('id', { count: 'exact' }).eq('client_id', session!.profileId),
-      supabase.from('consultations').select('id', { count: 'exact' }).eq('client_id', session!.profileId),
       supabase.from('pooja_requests').select('id', { count: 'exact' }).eq('client_id', session!.profileId),
     ]);
 
     setStats({
       bookings: bookingsRes.count || 0,
-      consultations: consultationsRes.count || 0,
+      consultations: 0,
       requests: requestsRes.count || 0,
     });
   };
@@ -124,14 +123,10 @@ export default function ClientDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-2 gap-4 text-center">
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold text-primary">{stats.bookings}</div>
                 <div className="text-sm text-muted-foreground">Bookings</div>
-              </div>
-              <div className="p-4 rounded-lg bg-muted/50">
-                <div className="text-2xl font-bold text-primary">{stats.consultations}</div>
-                <div className="text-sm text-muted-foreground">Consultations</div>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold text-primary">{stats.requests}</div>
@@ -156,9 +151,9 @@ export default function ClientDashboard() {
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
-            <Link to="/consultations">
+            <Link to="/client/requests">
               <MessageSquare className="h-6 w-6" />
-              <span>My Consultations</span>
+              <span>My Requests</span>
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-auto py-6 flex-col gap-2">
