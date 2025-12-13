@@ -246,18 +246,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: new Error(clientError.message) };
         }
       } else if (role === 'purohit') {
-        const { error: purohitError } = await supabase
+        // Insert into purohits table (no email - it goes to purohit_private)
+        const { data: purohitData, error: purohitError } = await supabase
           .from('purohits')
           .insert({
             user_id: user.id,
             full_name: fullName,
             city: city,
-            email: user.email,
-          });
+          })
+          .select()
+          .single();
 
         if (purohitError) {
           console.error('Purohit creation error:', purohitError);
           return { error: new Error(purohitError.message) };
+        }
+
+        // Insert email into purohit_private table
+        if (purohitData) {
+          const { error: privateError } = await supabase
+            .from('purohit_private')
+            .insert({
+              purohit_id: purohitData.id,
+              email: user.email,
+            });
+
+          if (privateError) {
+            console.error('Purohit private data error:', privateError);
+            // Non-fatal error, continue
+          }
         }
       }
 
