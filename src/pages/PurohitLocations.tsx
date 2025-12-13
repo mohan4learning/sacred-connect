@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { LocationAutocomplete } from "@/components/LocationAutocomplete";
-import { ArrowLeft, MapPin, Plus, X, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, MapPin, Plus, X, Save, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { INDIAN_STATES, DISTRICTS_BY_STATE } from "@/lib/indianLocations";
 
 export default function PurohitLocations() {
   const { purohitRecord, loading: authLoading, isPurohit, user } = useAuth();
@@ -144,14 +146,51 @@ export default function PurohitLocations() {
                   </Badge>
                 ))}
               </div>
-              {serviceableCities.length === 0 && (
+            {serviceableCities.length === 0 && (
                 <p className="text-sm text-muted-foreground">No cities added yet</p>
               )}
             </div>
 
+            {/* Add All Cities from State */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Add All Cities from a State
+              </Label>
+              <Select onValueChange={(state) => {
+                const stateCities = DISTRICTS_BY_STATE[state] || [];
+                if (stateCities.length === 0) {
+                  toast.error("No cities found for this state");
+                  return;
+                }
+                const uppercaseCities = stateCities.map(c => c.toUpperCase());
+                const newCities = uppercaseCities.filter(c => !serviceableCities.includes(c));
+                if (newCities.length === 0) {
+                  toast.info("All cities from this state are already added");
+                  return;
+                }
+                setServiceableCities([...serviceableCities, ...newCities]);
+                toast.success(`Added ${newCities.length} cities from ${state}`);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a state to add all its cities" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDIAN_STATES.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state} ({DISTRICTS_BY_STATE[state]?.length || 0} cities)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selecting a state will add all cities/districts from that state
+              </p>
+            </div>
+
             {/* Add New City */}
             <div className="space-y-2">
-              <Label>Add a City</Label>
+              <Label>Add Individual City</Label>
               <div className="flex gap-2">
                 <LocationAutocomplete
                   type="city"
@@ -166,7 +205,7 @@ export default function PurohitLocations() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Select from suggestions or type a custom city name. Press Add to include the city.
+                Or add individual cities one by one
               </p>
             </div>
 

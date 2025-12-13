@@ -230,6 +230,37 @@ export default function PurohitServices() {
     }
   };
 
+  const handleAddAll = async () => {
+    const servicesToAdd = allServices.filter(s => !services.find(ps => ps.service_id === s.id));
+    if (servicesToAdd.length === 0) {
+      toast.info("All services are already added");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const insertData = servicesToAdd.map(s => ({
+        purohit_id: purohitRecord!.id,
+        service_id: s.id,
+        price_min: null,
+        price_max: null,
+      }));
+
+      const { error } = await supabase
+        .from('purohit_services')
+        .insert(insertData);
+
+      if (error) throw error;
+      toast.success(`Added ${servicesToAdd.length} services`);
+      fetchServices();
+    } catch (error) {
+      console.error('Error adding all services:', error);
+      toast.error("Failed to add all services");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Filter out already added services when adding new
   const availableServices = editingService 
     ? allServices 
@@ -268,13 +299,20 @@ export default function PurohitServices() {
               Manage the pooja services you offer and your pricing
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="btn-hero" onClick={handleOpenAdd}>
+          <div className="flex gap-2">
+            {availableServices.length > 0 && (
+              <Button variant="outline" onClick={handleAddAll} disabled={saving}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Service
+                Add All ({availableServices.length})
               </Button>
-            </DialogTrigger>
+            )}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="btn-hero" onClick={handleOpenAdd}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Service
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{editingService ? 'Edit Service' : 'Add Service'}</DialogTitle>
@@ -384,6 +422,7 @@ export default function PurohitServices() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {services.length === 0 ? (
