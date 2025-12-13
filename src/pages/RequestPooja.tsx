@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -196,14 +197,25 @@ export default function RequestPooja() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>City *</Label>
-                  <Input placeholder="e.g., Mumbai" {...register("city")} />
+                  <LocationAutocomplete
+                    type="city"
+                    value={watch("city") || ""}
+                    onChange={(v) => setValue("city", v)}
+                    placeholder="Select or type city..."
+                  />
                   {errors.city && (
                     <p className="text-sm text-destructive">{errors.city.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label>Area</Label>
-                  <Input placeholder="e.g., Bandra" {...register("area")} />
+                  <LocationAutocomplete
+                    type="area"
+                    value={watch("area") || ""}
+                    onChange={(v) => setValue("area", v)}
+                    city={watch("city") || ""}
+                    placeholder="Select or type area..."
+                  />
                 </div>
               </div>
 
