@@ -7,6 +7,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import SelectRole from "./pages/SelectRole";
 import AdminLogin from "./pages/AdminLogin";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -42,6 +44,8 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/select-role" element={<SelectRole />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/purohits" element={<PurohitListing />} />
