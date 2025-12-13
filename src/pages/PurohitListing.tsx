@@ -19,7 +19,8 @@ interface Purohit {
   remote_pooja_available: boolean;
   in_person_available: boolean;
   services: string[];
-  bookingCount: number;
+  avgRating: number;
+  reviewCount: number;
 }
 
 interface Service {
@@ -86,7 +87,10 @@ export default function PurohitListing() {
       const purohitIds = data.map((p: any) => p.id).filter(Boolean);
       
       let servicesMap: Record<string, string[]> = {};
+      let ratingsMap: Record<string, { avg: number; count: number }> = {};
+      
       if (purohitIds.length > 0) {
+        // Fetch services
         const { data: servicesData } = await supabase
           .from('purohit_services')
           .select('purohit_id, pooja_services (name)')
@@ -102,6 +106,18 @@ export default function PurohitListing() {
             }
           });
         }
+
+        // Fetch ratings using RPC functions
+        for (const pId of purohitIds) {
+          const [avgRes, countRes] = await Promise.all([
+            supabase.rpc('get_purohit_avg_rating', { p_purohit_id: pId }),
+            supabase.rpc('get_purohit_review_count', { p_purohit_id: pId })
+          ]);
+          ratingsMap[pId] = {
+            avg: avgRes.data || 0,
+            count: countRes.data || 0
+          };
+        }
       }
 
       let processed = data.map((p: any) => ({
@@ -115,7 +131,8 @@ export default function PurohitListing() {
         remote_pooja_available: p.remote_pooja_available,
         in_person_available: p.in_person_available,
         services: servicesMap[p.id] || [],
-        bookingCount: 0, // We don't show booking count to other purohits for privacy
+        avgRating: ratingsMap[p.id]?.avg || 0,
+        reviewCount: ratingsMap[p.id]?.count || 0,
       }));
 
       // Filter by service
@@ -138,6 +155,10 @@ export default function PurohitListing() {
       // Sort
       if (sortBy === 'experience') {
         processed.sort((a, b) => b.experience_years - a.experience_years);
+      } else if (sortBy === 'reviews') {
+        processed.sort((a, b) => b.reviewCount - a.reviewCount);
+      } else if (sortBy === 'rating') {
+        processed.sort((a, b) => b.avgRating - a.avgRating);
       }
 
       setPurohits(processed);
@@ -151,14 +172,6 @@ export default function PurohitListing() {
     fetchPurohits();
   };
 
-  const getRating = (bookingCount: number) => {
-    // MVP: Derive rating from completed bookings
-    if (bookingCount >= 50) return 4.9;
-    if (bookingCount >= 20) return 4.7;
-    if (bookingCount >= 10) return 4.5;
-    if (bookingCount >= 5) return 4.3;
-    return 4.0;
-  };
 
   return (
     <Layout>
@@ -271,7 +284,12 @@ export default function PurohitListing() {
                       </div>
                       <div className="flex items-center gap-1 text-amber-500">
                         <Star className="h-4 w-4 fill-current" />
-                        <span className="text-sm font-medium">{getRating(purohit.bookingCount).toFixed(1)}</span>
+                        <span className="text-sm font-medium">
+                          {purohit.avgRating > 0 ? purohit.avgRating.toFixed(1) : 'New'}
+                        </span>
+                        {purohit.reviewCount > 0 && (
+                          <span className="text-xs text-muted-foreground">({purohit.reviewCount})</span>
+                        )}
                       </div>
                     </div>
 

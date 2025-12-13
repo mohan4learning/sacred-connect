@@ -708,6 +708,14 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_purohit_avg_rating: {
+        Args: { p_purohit_id: string }
+        Returns: number
+      }
+      get_purohit_review_count: {
+        Args: { p_purohit_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
