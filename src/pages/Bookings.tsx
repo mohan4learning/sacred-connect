@@ -52,8 +52,23 @@ export default function Bookings() {
     setLoading(false);
   };
 
-  const activeBookings = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
-  const pastBookings = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
+  const now = new Date();
+  const activeBookings = bookings.filter(b => {
+    // Active: pending or confirmed, but only if scheduled date is in the future or not set
+    if (['completed', 'cancelled'].includes(b.status)) return false;
+    if (b.scheduled_at && new Date(b.scheduled_at) < now && b.status === 'pending') {
+      return false; // Expired pending bookings go to past
+    }
+    return ['pending', 'confirmed'].includes(b.status);
+  });
+  const pastBookings = bookings.filter(b => {
+    // Past: completed, cancelled, OR pending bookings that are past their scheduled date
+    if (['completed', 'cancelled'].includes(b.status)) return true;
+    if (b.scheduled_at && new Date(b.scheduled_at) < now && b.status === 'pending') {
+      return true; // Expired pending bookings
+    }
+    return false;
+  });
 
   // Calculate earnings for purohit
   const earningsData = useMemo(() => {
