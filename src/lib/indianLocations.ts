@@ -267,6 +267,82 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
   ]
 };
 
+// Alias mapping: old names -> new official names
+export const LOCATION_ALIASES: Record<string, string> = {
+  // Karnataka
+  "bangalore": "Bengaluru",
+  "mysore": "Mysuru",
+  "mangalore": "Mangaluru",
+  "belgaum": "Belagavi",
+  "hubli": "Hubballi-Dharwad",
+  "gulbarga": "Kalaburagi",
+  "shimoga": "Shivamogga",
+  "tumkur": "Tumakuru",
+  "bellary": "Ballari",
+  "bijapur": "Vijayapura",
+  
+  // Kerala
+  "trivandrum": "Thiruvananthapuram",
+  "calicut": "Kozhikode",
+  "alleppey": "Alappuzha",
+  "cochin": "Kochi",
+  "trichur": "Thrissur",
+  "palghat": "Palakkad",
+  "cannanore": "Kannur",
+  "quilon": "Kollam",
+  
+  // Tamil Nadu
+  "madras": "Chennai",
+  "tanjore": "Thanjavur",
+  "trichy": "Tiruchirappalli",
+  "trichinopoly": "Tiruchirappalli",
+  "ootacamund": "Ooty",
+  "tuticorin": "Thoothukudi",
+  
+  // Maharashtra
+  "bombay": "Mumbai",
+  "poona": "Pune",
+  "aurangabad": "Chhatrapati Sambhajinagar",
+  "osmanabad": "Dharashiv",
+  
+  // West Bengal
+  "calcutta": "Kolkata",
+  
+  // Uttar Pradesh
+  "allahabad": "Prayagraj",
+  "banaras": "Varanasi",
+  "benares": "Varanasi",
+  "cawnpore": "Kanpur Nagar",
+  
+  // Haryana
+  "gurgaon": "Gurugram",
+  
+  // Puducherry
+  "pondicherry": "Puducherry",
+  
+  // Gujarat
+  "baroda": "Vadodara",
+  
+  // Himachal Pradesh
+  "simla": "Shimla",
+  
+  // Odisha (state was also renamed)
+  "orissa": "Odisha",
+  
+  // Uttarakhand (state was also renamed)
+  "uttaranchal": "Uttarakhand",
+  
+  // Chhattisgarh
+  "chattisgarh": "Chhattisgarh",
+  
+  // Andhra Pradesh
+  "vizag": "Visakhapatnam",
+  "waltair": "Visakhapatnam",
+  
+  // Telangana
+  "secunderabad": "Hyderabad",
+};
+
 // Flatten all cities for quick search
 const ALL_LOCATIONS: LocationResult[] = [];
 INDIAN_STATES.forEach(state => {
@@ -294,7 +370,52 @@ export const POPULAR_CITIES = [
   "Noida", "Gurugram", "Kochi", "Thiruvananthapuram", "Mysuru", "Mangaluru"
 ];
 
-// Search locations
+// Resolve alias to official name
+const resolveAlias = (query: string): string => {
+  const lowerQuery = query.toLowerCase();
+  return LOCATION_ALIASES[lowerQuery] || query;
+};
+
+// Check if a location matches the query (including alias check)
+const matchesQuery = (locationName: string, query: string, matchType: 'exact' | 'startsWith' | 'contains'): boolean => {
+  const lowerName = locationName.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  
+  // Direct match
+  let directMatch = false;
+  if (matchType === 'exact') {
+    directMatch = lowerName === lowerQuery;
+  } else if (matchType === 'startsWith') {
+    directMatch = lowerName.startsWith(lowerQuery);
+  } else {
+    directMatch = lowerName.includes(lowerQuery);
+  }
+  
+  if (directMatch) return true;
+  
+  // Check if query is an alias for this location
+  const resolvedName = LOCATION_ALIASES[lowerQuery];
+  if (resolvedName && resolvedName.toLowerCase() === lowerName) {
+    return true;
+  }
+  
+  // Check partial alias matches for startsWith and contains
+  if (matchType !== 'exact') {
+    for (const [alias, officialName] of Object.entries(LOCATION_ALIASES)) {
+      if (officialName.toLowerCase() === lowerName) {
+        if (matchType === 'startsWith' && alias.startsWith(lowerQuery)) {
+          return true;
+        } else if (matchType === 'contains' && alias.includes(lowerQuery)) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+};
+
+// Search locations with alias support
 export const searchLocations = (query: string): LocationResult[] => {
   if (!query || query.length < 2) {
     return POPULAR_CITIES.slice(0, 15).map(city => {
@@ -303,29 +424,28 @@ export const searchLocations = (query: string): LocationResult[] => {
     });
   }
 
-  const lowerQuery = query.toLowerCase();
   const results: LocationResult[] = [];
   const seen = new Set<string>();
 
-  // Exact matches first
+  // Exact matches first (including alias exact matches)
   ALL_LOCATIONS.forEach(loc => {
-    if (loc.name.toLowerCase() === lowerQuery && !seen.has(loc.fullName || loc.name)) {
+    if (matchesQuery(loc.name, query, 'exact') && !seen.has(loc.fullName || loc.name)) {
       results.push(loc);
       seen.add(loc.fullName || loc.name);
     }
   });
 
-  // Starts with query
+  // Starts with query (including alias matches)
   ALL_LOCATIONS.forEach(loc => {
-    if (loc.name.toLowerCase().startsWith(lowerQuery) && !seen.has(loc.fullName || loc.name)) {
+    if (matchesQuery(loc.name, query, 'startsWith') && !seen.has(loc.fullName || loc.name)) {
       results.push(loc);
       seen.add(loc.fullName || loc.name);
     }
   });
 
-  // Contains query
+  // Contains query (including alias matches)
   ALL_LOCATIONS.forEach(loc => {
-    if (loc.name.toLowerCase().includes(lowerQuery) && !seen.has(loc.fullName || loc.name)) {
+    if (matchesQuery(loc.name, query, 'contains') && !seen.has(loc.fullName || loc.name)) {
       results.push(loc);
       seen.add(loc.fullName || loc.name);
     }
