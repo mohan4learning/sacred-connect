@@ -267,9 +267,19 @@ export default function BookingDetail() {
               {isPurohit && (
                 <>
                   {booking.status === "pending" && (
-                    <Button onClick={() => updateStatus("confirmed")} className="w-full">
-                      Confirm Booking
-                    </Button>
+                    <>
+                      {booking.price_agreed ? (
+                        <Button onClick={() => updateStatus("confirmed")} className="w-full">
+                          Confirm Booking
+                        </Button>
+                      ) : (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                          <p className="text-sm text-amber-800">
+                            Please agree on the price with the client before confirming.
+                          </p>
+                        </div>
+                      )}
+                    </>
                   )}
                   {booking.status === "confirmed" && (
                     <Button onClick={() => updateStatus("completed")} className="w-full">
