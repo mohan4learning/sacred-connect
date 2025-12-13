@@ -14,6 +14,7 @@ import { ArrowLeft, Calendar, MapPin, IndianRupee, Video, Users, MessageSquare, 
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { cn } from "@/lib/utils";
 
 interface PoojaRequestData {
   id: string;
@@ -33,6 +34,14 @@ interface PoojaRequestData {
   created_at: string;
 }
 
+interface MessageData {
+  id: string;
+  sender_role: string;
+  sender_id: string;
+  message_text: string;
+  created_at: string;
+}
+
 interface ResponseData {
   id: string;
   purohit_id: string;
@@ -41,6 +50,7 @@ interface ResponseData {
   created_at: string;
   quote: string | null;
   message: string | null;
+  messages: MessageData[];
 }
 
 export default function PoojaRequestDetail() {
@@ -74,6 +84,31 @@ export default function PoojaRequestDetail() {
       fetchResponses();
     }
   }, [id, session?.profileId]);
+
+  // Subscribe to realtime message updates
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`request-responses-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'consultation_messages',
+        },
+        () => {
+          // Refetch responses when new messages arrive
+          fetchResponses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   const fetchRequest = async () => {
     setLoading(true);
@@ -133,15 +168,14 @@ export default function PoojaRequestDetail() {
         setHasResponded(!!myResponse);
       }
 
-      // Get first message for each consultation to extract quote
+      // Get all messages for each consultation
       const responsesWithMessages = await Promise.all(
         consultations.map(async (c: any) => {
           const { data: messages } = await supabase
             .from('consultation_messages')
-            .select('message_text')
+            .select('*')
             .eq('consultation_id', c.id)
-            .order('created_at', { ascending: true })
-            .limit(1);
+            .order('created_at', { ascending: true });
 
           const firstMessage = messages?.[0]?.message_text || '';
           const quoteMatch = firstMessage.match(/Quote: ₹([\d,]+)/);
@@ -156,6 +190,7 @@ export default function PoojaRequestDetail() {
             created_at: c.created_at,
             quote: quote,
             message: messageWithoutQuote || null,
+            messages: messages || [],
           };
         })
       );
@@ -452,15 +487,45 @@ export default function PoojaRequestDetail() {
                       </div>
                     </div>
                     
-                    {response.quote && (
-                      <div className="mb-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded text-emerald-700 dark:text-emerald-300 font-semibold">
-                        {response.quote}
-                      </div>
-                    )}
-                    
-                    {response.message && (
-                      <p className="text-sm text-muted-foreground">{response.message}</p>
-                    )}
+                    {/* Message Thread */}
+                    <div className="space-y-2 mb-3">
+                      {response.messages.map((msg, idx) => {
+                        const isFirstMessage = idx === 0;
+                        const displayText = isFirstMessage 
+                          ? msg.message_text.replace(/Quote: ₹[\d,]+\n*/, '').trim()
+                          : msg.message_text;
+                        const senderLabel = msg.sender_role === 'purohit' ? response.purohit_name : request.client_name;
+                        const isOwnMessage = msg.sender_id === session?.profileId;
+
+                        return (
+                          <div key={msg.id} className="space-y-1">
+                            {isFirstMessage && response.quote && (
+                              <div className="p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded text-emerald-700 dark:text-emerald-300 font-semibold">
+                                {response.quote}
+                              </div>
+                            )}
+                            {displayText && (
+                              <div className={cn(
+                                "p-2 rounded-lg text-sm",
+                                isOwnMessage 
+                                  ? "bg-primary/10 border-l-2 border-primary" 
+                                  : "bg-muted/50 border-l-2 border-muted-foreground/30"
+                              )}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-medium">
+                                    {isOwnMessage ? 'You' : senderLabel}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(msg.created_at), 'MMM d, h:mm a')}
+                                  </span>
+                                </div>
+                                <p className="text-muted-foreground">{displayText}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
 
                     {/* Actions for responses */}
                     <div className="flex flex-wrap gap-2 mt-3">
