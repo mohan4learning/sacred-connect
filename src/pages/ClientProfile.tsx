@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,22 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LocationAutocomplete } from "@/components/LocationAutocomplete";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Camera, Loader2, User } from "lucide-react";
 
 export default function ClientProfile() {
   const navigate = useNavigate();
   const { user, clientRecord, loading: authLoading } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [fullName, setFullName] = useState("");
   const [city, setCity] = useState("");
   const [area, setArea] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (clientRecord) {
@@ -30,8 +34,53 @@ export default function ClientProfile() {
       setArea(clientRecord.area || "");
       setAddress(clientRecord.address || "");
       setPhone(clientRecord.phone || "");
+      setAvatarUrl((clientRecord as any).avatar_url || null);
     }
   }, [clientRecord]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `clients/${user.id}/${Date.now()}.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+      toast.success("Photo uploaded successfully");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +105,7 @@ export default function ClientProfile() {
         area: area.trim() || null,
         address: address.trim() || null,
         phone: phone.trim() || null,
+        avatar_url: avatarUrl,
       })
       .eq("id", clientRecord.id);
 
@@ -90,6 +140,13 @@ export default function ClientProfile() {
     );
   }
 
+  const initials = fullName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <Layout>
       <div className="container py-8 max-w-2xl">
@@ -105,6 +162,42 @@ export default function ClientProfile() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Avatar Upload */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={avatarUrl || undefined} alt={fullName} />
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {initials || <User className="h-10 w-10" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute bottom-0 right-0 rounded-full h-8 w-8"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                  >
+                    {uploadingAvatar ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Click the camera icon to upload a profile photo
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name *</Label>
                 <Input

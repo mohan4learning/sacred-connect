@@ -101,6 +101,7 @@ export type Database = {
         Row: {
           address: string | null
           area: string | null
+          avatar_url: string | null
           city: string
           created_at: string
           email: string | null
@@ -112,6 +113,7 @@ export type Database = {
         Insert: {
           address?: string | null
           area?: string | null
+          avatar_url?: string | null
           city: string
           created_at?: string
           email?: string | null
@@ -123,6 +125,7 @@ export type Database = {
         Update: {
           address?: string | null
           area?: string | null
+          avatar_url?: string | null
           city?: string
           created_at?: string
           email?: string | null
