@@ -91,7 +91,11 @@ export default function Bookings() {
             <TabsContent value="active">
               {activeBookings.length === 0 ? (
                 <p className="text-muted-foreground py-8 text-center">
-                  No active bookings. <Link to="/purohits" className="text-primary hover:underline">Find a purohit</Link> to book.
+                  No active bookings.{" "}
+                  {isClient && (
+                    <Link to="/purohits" className="text-primary hover:underline">Find a purohit</Link>
+                  )}
+                  {isClient && " to book."}
                 </p>
               ) : (
                 <div className="space-y-4">
