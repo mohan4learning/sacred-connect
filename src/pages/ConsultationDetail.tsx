@@ -83,6 +83,18 @@ export default function ConsultationDetail() {
       return;
     }
 
+    // SECURITY: Verify user has access to this consultation
+    // Only the client or the purohit involved can view it
+    const isParticipant = 
+      (isClient && data.client_id === session?.profileId) ||
+      (isPurohit && data.purohit_id === session?.profileId);
+
+    if (!isParticipant) {
+      toast.error("You don't have access to this consultation");
+      navigate("/consultations");
+      return;
+    }
+
     setConsultation({
       ...data,
       purohit: data.purohits,

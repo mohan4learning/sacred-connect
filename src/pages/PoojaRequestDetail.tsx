@@ -151,8 +151,8 @@ export default function PoojaRequestDetail() {
   const fetchResponses = async () => {
     if (!id) return;
     
-    // Fetch consultations linked to this pooja request
-    const { data: consultations } = await supabase
+    // Build query for consultations linked to this pooja request
+    let query = supabase
       .from('consultations')
       .select(`
         id, purohit_id, status, created_at,
@@ -161,11 +161,18 @@ export default function PoojaRequestDetail() {
       .eq('pooja_request_id', id)
       .order('created_at', { ascending: false });
 
+    // IMPORTANT: Purohits should only see their own responses, not other purohits' responses
+    // Clients (request owners) can see all responses
+    if (isPurohit && session?.profileId) {
+      query = query.eq('purohit_id', session.profileId);
+    }
+
+    const { data: consultations } = await query;
+
     if (consultations) {
       // Check if current purohit has already responded
       if (isPurohit && session?.profileId) {
-        const myResponse = consultations.find((c: any) => c.purohit_id === session.profileId);
-        setHasResponded(!!myResponse);
+        setHasResponded(consultations.length > 0);
       }
 
       // Get all messages for each consultation
