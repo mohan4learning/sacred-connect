@@ -22,9 +22,19 @@ interface BookingChatProps {
   clientId: string;
   purohitId: string;
   isActive: boolean; // Chat enabled when booking is confirmed, disabled when completed/cancelled
+  isConfirmed: boolean; // Phone sharing allowed only when confirmed
 }
 
-export function BookingChat({ bookingId, clientId, purohitId, isActive }: BookingChatProps) {
+// Regex to detect phone numbers (Indian mobile: 10 digits, with optional +91 or 0 prefix)
+const PHONE_REGEX = /(?:\+91[\s-]?)?(?:0)?[6-9]\d{9}|\d{10,}/g;
+
+const containsPhoneNumber = (text: string): boolean => {
+  // Remove spaces and common separators to catch formatted numbers
+  const cleanedText = text.replace(/[\s\-().]/g, '');
+  return PHONE_REGEX.test(cleanedText) || /\d{10,}/.test(cleanedText);
+};
+
+export function BookingChat({ bookingId, clientId, purohitId, isActive, isConfirmed }: BookingChatProps) {
   const { clientRecord, purohitRecord, isClient, isPurohit } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -118,6 +128,13 @@ export function BookingChat({ bookingId, clientId, purohitId, isActive }: Bookin
     const senderRole = isClient ? "client" : "purohit";
     
     if (!newMessage.trim() || !profileId || !consultationId) return;
+
+    // Check for phone number sharing before booking is confirmed
+    if (!isConfirmed && containsPhoneNumber(newMessage)) {
+      toast.error("Phone numbers cannot be shared until the booking is confirmed");
+      return;
+    }
+
     setSending(true);
 
     const { error } = await supabase.from("consultation_messages").insert({

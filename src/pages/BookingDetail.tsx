@@ -262,6 +262,7 @@ export default function BookingDetail() {
                   clientId={booking.client.id}
                   purohitId={booking.purohit.id}
                   isActive={booking.status === "confirmed"}
+                  isConfirmed={booking.status === "confirmed"}
                 />
               </div>
             )}
