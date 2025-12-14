@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ReviewDialog } from "@/components/ReviewDialog";
+import { BookingChat } from "@/components/BookingChat";
 import { ArrowLeft, MapPin, Video, Users, Calendar, Phone, Mail, FileText, ExternalLink, Star } from "lucide-react";
 import { format, addMinutes } from "date-fns";
 import { toast } from "sonner";
@@ -250,6 +251,18 @@ export default function BookingDetail() {
                   <FileText className="h-4 w-4" /> Notes
                 </h3>
                 <p className="text-sm text-muted-foreground">{booking.notes}</p>
+              </div>
+            )}
+
+            {/* Chat Section - available when booking is confirmed, until completed */}
+            {["pending", "confirmed"].includes(booking.status) && (
+              <div className="border-t pt-4">
+                <BookingChat
+                  bookingId={booking.id}
+                  clientId={booking.client.id}
+                  purohitId={booking.purohit.id}
+                  isActive={booking.status === "confirmed"}
+                />
               </div>
             )}
 
