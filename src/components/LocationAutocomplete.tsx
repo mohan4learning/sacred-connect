@@ -28,7 +28,7 @@ export function LocationAutocomplete({
   const [inputValue, setInputValue] = useState(value);
   const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     setInputValue(value);
