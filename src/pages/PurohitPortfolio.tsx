@@ -81,7 +81,7 @@ export default function PurohitPortfolio() {
     try {
       const { error } = await supabase
         .from('purohits')
-        .update({ [field]: value })
+        .update({ [field]: value } as any)
         .eq('id', purohitRecord!.id);
 
       if (error) throw error;
